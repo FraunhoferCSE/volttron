@@ -686,7 +686,10 @@ class MasterWebService(Agent):
             os.makedirs(logdir)
 
         self.appContainer = WebApplicationWrapper(self, hostname, port)
-        svr = WSGIServer((hostname, port), self.appContainer)
+        svr = WSGIServer((hostname, port), self.appContainer,
+                         keyfile="/home/volttron/letsencrypt.key",
+                         certfile="/home/volttron/letsencrypt.crt"
+        )
         self._server_greenlet = gevent.spawn(svr.serve_forever)
 
         # with open(os.path.join(logdir, 'web.access.log'), 'wb') as accesslog:
