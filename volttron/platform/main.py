@@ -260,6 +260,7 @@ class Router(BaseRouter):
                  context=None, secretkey=None, publickey=None,
                  default_user_id=None, monitor=False, tracker=None,
                  volttron_central_address=None, instance_name=None,
+                 web_certfile=None,web_keyfile=None,
                  bind_web_address=None, volttron_central_serverkey=None):
         super(Router, self).__init__(
             context=context, default_user_id=default_user_id)
@@ -284,7 +285,8 @@ class Router(BaseRouter):
         self._volttron_central_serverkey = volttron_central_serverkey
         self._instance_name = instance_name
         self._bind_web_address = bind_web_address
-
+        self._web_certfile = web_certfile
+        self._web_keyfile = web_keyfile 
     def setup(self):
         sock = self.socket
         sock.identity = identity = str(uuid.uuid4())
@@ -703,6 +705,12 @@ def main(argv=sys.argv):
         '--bind-web-address', metavar='BINDWEBADDR', default=None,
         help='Bind a web server to the specified ip:port passed')
     agents.add_argument(
+        '--web-certfile', metavar='BINDWEBADDR', default=None,
+        help='Use this certificate file for SSL on the web server')
+    agents.add_argument(
+        '--web-keyfile', metavar='BINDWEBADDR', default=None,
+        help='Use this private key file for SSL on the web server')
+    agents.add_argument(
         '--volttron-central-address', default=None,
         help='The web address of a volttron central install instance.')
     agents.add_argument(
@@ -782,6 +790,9 @@ def main(argv=sys.argv):
         vip_local_address=ipc + 'vip.socket',
         # This is used to start the web server from the web module.
         bind_web_address=None,
+        # Use SSL certificates in the Web module
+        web_certfile=None,
+        web_keyfile=None
         # Used to contact volttron central when registering volttron central
         # platform agent.
         volttron_central_address=None,
