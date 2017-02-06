@@ -151,7 +151,7 @@ class DiscoveryInfo(object):
             )
         except (ConnectionError, NewConnectionError) as e:
             raise DiscoveryError(
-                "Connection to {} not available".format(real_url)
+                "Connection to {} not available: {}".format(real_url,e)
             )
         except Exception as e:
             raise DiscoveryError("Unhandled exception {}".format(e))
