@@ -353,6 +353,8 @@ class MasterWebService(Agent):
     """
 
     def __init__(self, serverkey, identity, address, bind_web_address, aip,
+                 web_certfile=None,
+                 web_keyfile=None,
                  volttron_central_address=None, **kwargs):
         """Initialize the discovery service with the serverkey
 
@@ -361,6 +363,8 @@ class MasterWebService(Agent):
         super(MasterWebService, self).__init__(identity, address, **kwargs)
 
         self.bind_web_address = bind_web_address
+        self.web_certfile = web_certfile
+        self.web_keyfile = web_keyfile
         self.serverkey = serverkey
         self.registeredroutes = []
         self.peerroutes = defaultdict(list)
@@ -684,11 +688,13 @@ class MasterWebService(Agent):
         logdir = os.path.join(vhome, "log")
         if not os.path.exists(logdir):
             os.makedirs(logdir)
-
+        
         self.appContainer = WebApplicationWrapper(self, hostname, port)
         svr = WSGIServer((hostname, port), self.appContainer,
-                         keyfile="/home/volttron/letsencrypt.key",
-                         certfile="/home/volttron/letsencrypt.crt"
+                         keyfile = self.web_keyfile,
+                         certfile = self.web_certfile
+                         #keyfile="/home/volttron/letsencrypt.key",
+                         #certfile="/home/volttron/letsencrypt.crt"
         )
         self._server_greenlet = gevent.spawn(svr.serve_forever)
 

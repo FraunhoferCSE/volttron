@@ -614,6 +614,8 @@ def start_volttron_process(opts):
             MasterWebService(
                 serverkey=publickey, identity=MASTER_WEB,
                 address=address,
+                web_keyfile=opts.web_keyfile,
+                web_certfile=opts.web_certfile,
                 bind_web_address=opts.bind_web_address,
                 volttron_central_address=opts.volttron_central_address,
                 aip=opts.aip, enable_store=False)
