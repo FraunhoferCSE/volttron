@@ -808,7 +808,7 @@ def main(argv=sys.argv):
         bind_web_address=None,
         # Use SSL certificates in the Web module
         web_certfile=None,
-        web_keyfile=None
+        web_keyfile=None,
         # Used to contact volttron central when registering volttron central
         # platform agent.
         volttron_central_address=None,
