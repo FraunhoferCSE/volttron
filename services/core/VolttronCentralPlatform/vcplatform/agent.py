@@ -259,6 +259,7 @@ class VolttronCentralPlatform(Agent):
                     except DiscoveryError as e:
                         _log.error(
                             "Unable to retrieve discovery info from volttron central.")
+                        _log.error(":%s"%e)
                         gevent.sleep(10)
 
                 self.current_config['vc_connect_address'] = info.vip_address
