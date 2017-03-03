@@ -53,7 +53,6 @@ var PlatformChart = React.createClass({
                 this._refreshChartTimeout = setTimeout(this._refreshChart, refreshInterval);
             }
         }
-        
     },
     _refreshChart: function () {
         
@@ -167,7 +166,9 @@ var PlatformChart = React.createClass({
         }
 
         return (
-            <div>
+            <div ref={function (div) {
+                this.container = div;
+            }.bind(this)}>
                 {platformChart}
             </div>
         );
@@ -200,11 +201,11 @@ var GraphLineChart = OutsideClick(React.createClass({
       platformChartStore.addChangeListener(this._onStoresChange);
 
       var lineChart = this._drawLineChart(
-                          this.state.chartName, 
-                          this.state.chartType, 
-                          this._lineData(this._getNested(this.props.data)),
-                          this.state.min, this.state.max
-                      );
+          this.state.chartName, 
+          this.state.chartType, 
+          this._lineData(this._getNested(this.props.data)),
+          this.state.min, this.state.max
+      );
 
       this.setState({lineChart: lineChart});
 
@@ -236,7 +237,7 @@ var GraphLineChart = OutsideClick(React.createClass({
       var max = platformChartStore.getMax(this.props.name);
 
       this.setState({min: (min ? min : d3.min(this.props.data, function (d) {return d["1"]}))});
-      this.setState({max: (max ? max : d3.max(this.props.data, function (d) {return d["1"]}))});
+      this.setState({max: (max ? max : d3.max(this.props.data, function (d) {return d["1"]}))});      
   },
   handleClickOutside: function () {      
       
@@ -254,11 +255,11 @@ var GraphLineChart = OutsideClick(React.createClass({
       var chartType = e.target.value;
       
       var lineChart = this._drawLineChart(
-                          this.state.chartName, 
-                          chartType, 
-                          this._lineData(this._getNested(this.props.data)),
-                          this.state.min, this.state.max
-                      );
+          this.state.chartName, 
+          chartType, 
+          this._lineData(this._getNested(this.props.data)),
+          this.state.min, this.state.max
+      );
 
       this.setState({lineChart: lineChart});
       this.setState({showTaptip: false});
@@ -296,10 +297,12 @@ var GraphLineChart = OutsideClick(React.createClass({
   },
   _onMinChange: function (e) {
       var min = e.target.value;
-      var lineChart = this._drawLineChart(this.state.chartName, 
-                                      this.state.chartType, 
-                                      this._lineData(this._getNested(this.props.data)),
-                                      min, this.state.max);
+      var lineChart = this._drawLineChart(
+          this.state.chartName, 
+          this.state.chartType, 
+          this._lineData(this._getNested(this.props.data)),
+          min, this.state.max
+      );
 
       this.setState({lineChart: lineChart});
 
@@ -312,10 +315,12 @@ var GraphLineChart = OutsideClick(React.createClass({
   },
   _onMaxChange: function (e) {
       var max = e.target.value;
-      var lineChart = this._drawLineChart(this.state.chartName, 
-                                      this.state.chartType, 
-                                      this._lineData(this._getNested(this.props.data)),
-                                      this.state.min, max);
+      var lineChart = this._drawLineChart(
+          this.state.chartName, 
+          this.state.chartType, 
+          this._lineData(this._getNested(this.props.data)),
+          this.state.min, max
+      );
 
       this.setState({lineChart: lineChart});
 

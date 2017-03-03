@@ -62,13 +62,15 @@ import pytz
 from collections import defaultdict
 from datetime import datetime
 
-from crate.client.exceptions import ConnectionError
+from crate.client.exceptions import ConnectionError, ProgrammingError
 from dateutil.relativedelta import relativedelta
 from calendar import monthrange
 from datetime import timedelta
 from dateutil.tz import tzutc
 
 from crate import client
+from volttron.platform.agent.utils import get_utc_seconds_from_epoch
+from volttron.platform.messaging.health import Status, STATUS_BAD
 from zmq.utils import jsonapi
 
 from volttron.platform.agent import utils
@@ -82,14 +84,14 @@ __version__ = '1.0'
 
 def historian(config_path, **kwargs):
     """
-    This method is called by the :py:func:`mongodb.historian.main` to parse
+    This method is called by the :py:func:`crate_historian.historian.main` to parse
     the passed config file or configuration dictionary object, validate the
     configuration entries, and create an instance of MongodbHistorian
 
     :param config_path: could be a path to a configuration file or can be a
                         dictionary object
     :param kwargs: additional keyword arguments if any
-    :return: an instance of :py:class:`MongodbHistorian`
+    :return: an instance of :py:class:`CrateHistorian`
     """
     if isinstance(config_path, dict):
         config_dict = config_path
@@ -114,15 +116,15 @@ def historian(config_path, **kwargs):
 
 class CrateHistorian(BaseHistorian):
     """
-    Historian that stores the data into mongodb collections.
+    Historian that stores the data into crate tables.
 
     """
 
     def __init__(self, config, **kwargs):
         """
-        Initialise the historian.
+        Initialize the historian.
 
-        The historian makes a mongoclient connection to the mongodb server.
+        The historian makes a crateclient connection to the crate cluster.
         This connection is thread-safe and therefore we create it before
         starting the main loop of the agent.
 
@@ -133,15 +135,17 @@ class CrateHistorian(BaseHistorian):
                        topic_replace_list used by parent classes)
 
         """
-        super(CrateHistorian, self).__init__(**kwargs)
-        self.tables_def, table_names = self.parse_table_def(config)
-        self._data_collection = table_names['data_table']
-        self._meta_collection = table_names['meta_table']
-        self._topic_collection = table_names['topics_table']
-        self._agg_topic_collection = table_names['agg_topics_table']
-        self._agg_meta_collection = table_names['agg_meta_table']
+        # self.tables_def, table_names = self.parse_table_def(config)
+        # self._data_collection = table_names['data_table']
+        # self._meta_collection = table_names['meta_table']
+        # self._topic_collection = table_names['topics_table']
+        # self._agg_topic_collection = table_names['agg_topics_table']
+        # self._agg_meta_collection = table_names['agg_meta_table']
+
+        _log.debug(config)
         self._connection_params = config['connection']['params']
-        self._schema = config.get('schema', 'historian')
+        self._schema = config['connection'].get('schema', 'historian')
+        self._raw_schema_enabled = config.get('raw_schema_enabled', None)
         self._client = None
         self._connection = None
 
@@ -151,27 +155,30 @@ class CrateHistorian(BaseHistorian):
         self._topic_name_map = {}
         self._topic_meta = {}
         self._agg_topic_id_map = {}
+        self._initialized = False
+        self._wait_until = None
+        super(CrateHistorian, self).__init__(**kwargs)
 
     def _get_topic_table(self, source, db_datatype):
         table = None
 
         if source == 'device':
             if db_datatype == 'string':
+                table = 'device_string'
+            else:
                 table = 'device'
-            else:
-                table = 'device_double'
 
-        if source == 'log':
+        if source == 'datalogger':
             if db_datatype == 'string':
-                table = 'datalogger'
+                table = 'datalogger_string'
             else:
-                table = 'datalogger_double'
+                table = 'datalogger'
 
         if source == 'analysis':
             if db_datatype == 'string':
-                table = 'analysis'
+                table = 'analysis_string'
             else:
-                table = 'analysis_double'
+                table = 'analysis'
 
         if source == 'record':
             table = 'record'
@@ -183,29 +190,55 @@ class CrateHistorian(BaseHistorian):
     def publish_to_historian(self, to_publish_list):
         _log.debug("publish_to_historian number of items: {}".format(
             len(to_publish_list)))
+        # Verify that we have actually gone through the historian_setup code
+        # before we attempt to do anything else.
+        if not self._initialized:
+            self.historian_setup()
+            if not self._initialized:
+                return
 
-        def insert_data(cursor, topic_id, ts, data):
+        if self._wait_until is not None:
+            ct = get_utc_seconds_from_epoch()
+            if ct > self._wait_until:
+                self._wait_until = None
+            else:
+                _log.debug('Waiting to attempt to write to database.')
+                return
+
+
+        def insert_data(cursor, topic_id, ts, data, topic_name=None):
+            target_table = self._topic_to_table_map[topic_id]
+            (schema_name, table_name) = target_table.split('.')
             insert_query = """INSERT INTO {} (topic_id, ts, result)
                               VALUES(?, ?, ?)
                               ON DUPLICATE KEY UPDATE result=result
-                            """.format(self._topic_to_table_map[topic_id])
+                            """.format(target_table)
             _log.debug("QUERY: {}".format(insert_query))
             _log.debug("PARAMS: {}".format(topic_id, ts, data))
             ts_formatted = utils.format_timestamp(ts)
 
             cursor.execute(insert_query, (topic_id, ts_formatted,
                                           data, data))
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
+            if self._raw_schema_enabled and table in ("datalogger", "device") and topic_name:
+                insert_query_raw = """INSERT INTO {}.{} (topic, ts, result)
+                                VALUES(?, ?, ?)
+                                ON DUPLICATE KEY UPDATE value=value
+                                """.format(schema_name, table_name + "_raw")
+                cursor.execute(insert_query_raw, (topic, ts_formatted,
+                                          data))
 
-            for x in to_publish_list:
-                _id = x['_id']  # A base_historian reference to internal id.
-                ts = x['timestamp']
-                source = x['source']
-                topic = x['topic']
-                value = x['value']
-                meta = x['meta']
+        try:
+            if self._connection is None:
+                self._connection = self.get_connection()
+
+            cursor = self._connection.cursor()
+
+            for row in to_publish_list:
+                ts = row['timestamp']
+                source = row['source']
+                topic = row['topic']
+                value = row['value']
+                meta = row['meta']
 
                 if source == 'scrape':
                     source = 'device'
@@ -227,15 +260,30 @@ class CrateHistorian(BaseHistorian):
                             db_datatype = 'numeric'
                         except ValueError:
                             db_datatype = 'string'
+                        except TypeError:
+                            if type(value) == dict and topic.startswith('record'):
+                                value = jsonapi.dumps(value)
+                            else:
+                                _log.error(
+                                    'Type was {} in type error for value: {}'.format(
+                                        type(value), value))
                 except ValueError:
+                    alert_key = "Inconsistency for topic: {}".format(topic)
+                    context = """
+Meta specified as {} but was given {} for value {}.  The data will not be
+cached.
+                    """.format(meta_type, type(value), value)
+                    status = Status.build(STATUS_BAD, context=context.strip())
+
+                    self.vip.health.send_alert(alert_key, status)
                     _log.error(
                         "Topic: {} "
                         "Couldn't cast value {} to {}".format(topic,
                                                               value,
                                                               meta_type))
                     # since this isn't going to be fixed we mark it as
-                    # handled
-                    self.report_handled(_id)
+                    # handled, note we need to pass the full row.
+                    self.report_handled(row)
                     continue
 
                 _log.debug('META IS: {}'.format(meta))
@@ -278,7 +326,7 @@ class CrateHistorian(BaseHistorian):
                         """.format(schema=self._schema), (topic, topic_id))
                     self._topic_name_map[topic_lower] = topic
 
-                insert_data(cursor, topic_id, ts, value)
+                insert_data(cursor, topic_id, ts, value, topic_name = topic)
 
                 old_meta = self._topic_meta.get(topic_id, {})
 
@@ -296,7 +344,13 @@ class CrateHistorian(BaseHistorian):
             self.report_all_handled()
         except ConnectionError:
             _log.error("Cannot connect to crate service.")
+            self._wait_until = get_utc_seconds_from_epoch() + 30
             self._connection = None
+        except ProgrammingError as e:
+            self._wait_until = get_utc_seconds_from_epoch() + 30
+            _log.error(e.args)
+            if cursor is not None:
+                cursor.close()
         finally:
             if cursor is not None:
                 cursor.close()
@@ -359,15 +413,19 @@ class CrateHistorian(BaseHistorian):
     def query_historian(self, topic, start=None, end=None, agg_type=None,
                         agg_period=None, skip=0, count=None,
                         order="FIRST_TO_LAST"):
-        """ Returns the results of the query from the mongo database.
+        """ Returns the results of the query from the crate database.
 
-        This historian stores data to the nearest second.  It will not
-        store subsecond resolution data.  This is an optimisation based
-        upon storage for the database.
         Please see
         :py:meth:`volttron.platform.agent.base_historian.BaseQueryHistorianAgent.query_historian`
         for input parameters and return value details
         """
+
+        # Verify that we have initialized through the historian setup code
+        # before we do anything else.
+        if not self._initialized:
+            self.historian_setup()
+            if not self._initialized:
+                return {}
         #try:
 
         # Final results that are sent back to the client.
@@ -543,33 +601,39 @@ class CrateHistorian(BaseHistorian):
         return self._connection
 
     def historian_setup(self):
-        _log.debug("HISTORIAN SETUP")
+        try:
+            _log.debug("HISTORIAN SETUP")
 
-        self._connection = self.get_connection()
+            self._connection = self.get_connection()
+            _log.debug("Using schema: {}".format(self._schema))
+            create_schema(self._connection, self._schema)
 
-        create_schema(self._connection, self._schema)
+            self._load_topic_map()
+            self._load_meta_map()
+            self._initialized = True
+        except Exception as e:
+            _log.error("Exception during historian setup!")
+            _log.error(e.args)
 
-        self._load_topic_map()
-        self._load_meta_map()
 
-        # self._client = mongoutils.get_mongo_client(self._connection_params)
-        # db = self._client.get_default_database()
-        # db[self._data_collection].create_index(
-        #     [('topic_id', pymongo.DESCENDING), ('ts', pymongo.DESCENDING)],
-        #     unique=True, background=True)
+            # self._client = mongoutils.get_mongo_client(self._connection_params)
+            # db = self._client.get_default_database()
+            # db[self._data_collection].create_index(
+            #     [('topic_id', pymongo.DESCENDING), ('ts', pymongo.DESCENDING)],
+            #     unique=True, background=True)
 
-        # self._topic_id_map, self._topic_name_map = \
-        #     mongoutils.get_topic_map(
-        #         self._client, self._topic_collection)
-        # self._load_meta_map()
-        #
-        # if self._agg_topic_collection in db.collection_names():
-        #     _log.debug("found agg_topics_collection ")
-        #     self._agg_topic_id_map = mongoutils.get_agg_topic_map(
-        #         self._client, self._agg_topic_collection)
-        # else:
-        #     _log.debug("no agg topics to load")
-        #     self._agg_topic_id_map = {}
+            # self._topic_id_map, self._topic_name_map = \
+            #     mongoutils.get_topic_map(
+            #         self._client, self._topic_collection)
+            # self._load_meta_map()
+            #
+            # if self._agg_topic_collection in db.collection_names():
+            #     _log.debug("found agg_topics_collection ")
+            #     self._agg_topic_id_map = mongoutils.get_agg_topic_map(
+            #         self._client, self._agg_topic_collection)
+            # else:
+            #     _log.debug("no agg topics to load")
+            #     self._agg_topic_id_map = {}
 
     def record_table_definitions(self, meta_table_name):
         _log.debug("In record_table_def  table:{}".format(meta_table_name))
