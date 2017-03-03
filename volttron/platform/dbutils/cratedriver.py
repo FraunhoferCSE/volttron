@@ -34,16 +34,16 @@ def create_schema(connection, schema="historian"):
             CREATE TABLE IF NOT EXISTS {schema}.analysis(
                 topic_id string,
                 ts timestamp NOT NULL,
-                result string,
+                result double,
                 primary key (topic_id, ts)
             )
             CLUSTERED INTO 6 SHARDS
         """.format(schema=schema),
         """
-        CREATE TABLE IF NOT EXISTS {schema}.analysis_double(
+        CREATE TABLE IF NOT EXISTS {schema}.analysis_string(
             topic_id string,
             ts timestamp NOT NULL,
-            result double,
+            result string,
             primary key (topic_id, ts)
         )
         CLUSTERED INTO 6 SHARDS
@@ -52,16 +52,16 @@ def create_schema(connection, schema="historian"):
         CREATE TABLE IF NOT EXISTS {schema}.datalogger(
             topic_id string,
             ts timestamp NOT NULL,
-            result string,
+            result double,
             primary key (topic_id, ts)
         )
         CLUSTERED INTO 6 SHARDS
         """.format(schema=schema),
         """
-            CREATE TABLE IF NOT EXISTS {schema}.datalogger_double(
+            CREATE TABLE IF NOT EXISTS {schema}.datalogger_string(
                 topic_id string,
                 ts timestamp NOT NULL,
-                result string,
+                result double,
                 primary key (topic_id, ts)
             )
             CLUSTERED INTO 6 SHARDS
@@ -70,16 +70,16 @@ def create_schema(connection, schema="historian"):
         CREATE TABLE IF NOT EXISTS {schema}.device(
             topic_id string,
             ts timestamp NOT NULL,
-            result string,
+            result double,
             primary key (topic_id, ts)
         )
         CLUSTERED INTO 6 SHARDS
         """.format(schema=schema),
         """
-            CREATE TABLE IF NOT EXISTS {schema}.device_double(
+            CREATE TABLE IF NOT EXISTS {schema}.device_string(
                 topic_id string,
                 ts timestamp NOT NULL,
-                result double,
+                result string,
                 primary key (topic_id, ts)
             )
             CLUSTERED INTO 6 SHARDS
@@ -92,14 +92,34 @@ def create_schema(connection, schema="historian"):
             primary key (topic_id, ts)
         )
         CLUSTERED INTO 6 SHARDS
+        """.format(schema=schema),
+        """
+        CREATE TABLE IF NOT EXISTS {schema}."device_raw"(
+            topic string,
+            INDEX topic_ft using fulltext (topic) with (analyzer = 'pattern', type='pattern', lowercase='true', pattern='(W+|/|_)'),
+            ts timestamp NOT NULL,
+            value double,
+            primary key (topic, ts)
+        )
+        CLUSTERED INTO 6 SHARDS
+        """.format(schema=schema),
+        """
+        CREATE TABLE IF NOT EXISTS {schema}."datalogger_raw"(
+            topic string,
+            INDEX topic_ft using fulltext (topic),
+            ts timestamp NOT NULL,
+            value double,
+            primary key (topic, ts)
+        )
+        CLUSTERED INTO 6 SHARDS
         """.format(schema=schema)
     ]
     try:
         cursor = connection.cursor()
         for t in create_queries:
+            _log.debug(t)
             cursor.execute(t)
             _log.debug("Query took: {}ms".format(cursor.duration))
-        #cursor.execute(query)
         _log.debug("Query took: {}ms".format(cursor.duration))
     finally:
         cursor.close()
