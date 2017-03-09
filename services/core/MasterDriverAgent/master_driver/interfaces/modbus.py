@@ -164,10 +164,10 @@ class ModbusByteRegister(ModbusRegisterBase):
     
    
     def get_state(self, client):
-        if self.read_only:
-            response = client.read_input_registers(self.address, count=self.get_register_count(), unit=self.slave_id)
-        else:
-            response = client.read_holding_registers(self.address, count=self.get_register_count(), unit=self.slave_id)
+        #if self.read_only:
+        #    response = client.read_input_registers(self.address, count=self.get_register_count(), unit=self.slave_id)
+        #else:
+        response = client.read_holding_registers(self.address, count=self.get_register_count(), unit=self.slave_id)
             
         if response is None:
             raise ModbusInterfaceException("pymodbus returned None")
