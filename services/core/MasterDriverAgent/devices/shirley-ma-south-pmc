@@ -1,11 +1,10 @@
 {
-    "driver_config": {"device_address": "127.0.0.1", "port":5021},
+    "driver_config": {"device_address": "SUNDIAL03", "port":5020, "slave_id":1},
     "campus": "Shirley-MA",
     "building": "South",
     "unit": "PMC",
     "driver_type": "modbus",
-    "registry_config":"/home/volttron/Docs/design-docs/SOUTH.csv",
-    "interval": 5,
+    "registry_config": "config://registry_configs/SOUTH.csv",
     "timezone": "UTC",
     "publish_breadth_first_all":false,
     "publish_depth_first":false,
