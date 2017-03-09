@@ -56,21 +56,21 @@ class MonetSqlFuncts(DbDriver):
         try:
             # posint of 6 ?  
             self.execute_stmt(
-                'CREATE TABLE IF NOT EXISTS ' + self.data_table +
+                'CREATE TABLE ' + self.data_table +
                 ' (ts timestamp(3) NOT NULL,\
                 topic_id INTEGER NOT NULL, \
                 value_string TEXT NOT NULL, \
                      UNIQUE(topic_id, ts))')
             
             self.execute_stmt('''CREATE INDEX data_idx
-                                    ON ''' + self.data_table + ''' (ts ASC)''')
-            self.execute_stmt('''CREATE TABLE IF NOT EXISTS ''' +
+                                    ON ''' + self.data_table + ''' (ts)''')
+            self.execute_stmt('''CREATE TABLE ''' +
                               self.topics_table +
                               ''' (topic_id INTEGER NOT NULL AUTO_INCREMENT,
                                    topic_name varchar(512) NOT NULL,
                                    PRIMARY KEY (topic_id),
                                    UNIQUE(topic_name))''')
-            self.execute_stmt('''CREATE TABLE IF NOT EXISTS '''
+            self.execute_stmt('''CREATE TABLE '''
                               + self.meta_table +
                               '''(topic_id INTEGER NOT NULL,
                                metadata TEXT NOT NULL,
@@ -85,17 +85,18 @@ class MonetSqlFuncts(DbDriver):
                       "restarting historian. Please refer to " \
                       "monet-create*.sql files for create " \
                       "statements"
+            print (err)
             raise RuntimeError(err_msg)
-
-    
-    return sched
-
 
 def main(args):
     monet = MonetSqlFuncts(
         { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
-        {})
-
+        {
+            'data_table':'data_test',
+            'topics_table':'topics_test',
+            'meta_table':'meta_test'
+        })
+    monet.setup_historian_tables()
 
 if __name__ == '__main__':
     # Entry point for script
