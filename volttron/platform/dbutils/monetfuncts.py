@@ -42,17 +42,14 @@ class MonetSqlFuncts(DbDriver):
 
     def setup_historian_tables(self):
         """
-        1. Check for tables existing. 
-
-        2. Create data_table if not.
-
-        3. Create data_idx ? 
-
-        4. Create topics_table
-
-        5. Create meta table. 
+        TODO: add tests for existence. 
 
         """
+        rows = self.select("\\d", [])
+        #if rows:
+        #    _log.debug("Found table {}. Historian table exists".format(
+        #        self.data_table))
+        #    return
         try:
             # posint of 6 ?  
             self.execute_stmt(
@@ -85,8 +82,32 @@ class MonetSqlFuncts(DbDriver):
                       "restarting historian. Please refer to " \
                       "monet-create*.sql files for create " \
                       "statements"
-            print (err)
-            raise RuntimeError(err_msg)
+
+            raise RuntimeError(err_msg + ',' + repr(err))
+    # thus far. 
+    def record_table_definitions(self, tables_def, meta_table_name):
+        _log.debug(
+            "In record_table_def {} {}".format(tables_def, meta_table_name))
+        self.execute_stmt(
+            'CREATE TABLE ' + meta_table_name +
+            ' (table_id varchar(512) PRIMARY KEY, \
+               table_name varchar(512) NOT NULL, \
+               table_prefix varchar(512));')
+
+        table_prefix = tables_def.get('table_prefix', "")
+
+        insert_stmt = 'REPLACE INTO ' + meta_table_name + \
+                      ' VALUES (%s, %s, %s)'
+        self.insert_stmt(insert_stmt,
+                         ('data_table', tables_def['data_table'],
+                          table_prefix))
+        self.insert_stmt(insert_stmt,
+                         ('topics_table', tables_def['topics_table'],
+                          table_prefix))
+        self.insert_stmt(
+            insert_stmt,
+            ('meta_table', tables_def['meta_table'], table_prefix))
+        self.commit()
 
 def main(args):
     monet = MonetSqlFuncts(
