@@ -90,25 +90,31 @@ class MonetSqlFuncts(DbDriver):
     def record_table_definitions(self, tables_def, meta_table_name):
         _log.debug(
             "In record_table_def {} {}".format(tables_def, meta_table_name))
-        self.execute_stmt(
-            'CREATE TABLE ' + meta_table_name +
-            ' (table_id varchar(512) PRIMARY KEY, \
-               table_name varchar(512) NOT NULL, \
-               table_prefix varchar(512));')
-
+        rows = map(
+            lambda x:x[0],
+            self.select("select name from sys.tables where system=0;", []))
+        if meta_table_name not in rows:
+            _log.debug("Found table {}. Historian table exists".format(
+                self.data_table))
+            self.execute_stmt(
+                'CREATE TABLE ' + meta_table_name +
+                ' (table_id varchar(512) PRIMARY KEY, \
+                table_name varchar(512) NOT NULL, \
+                table_prefix varchar(512));')
+            
         table_prefix = tables_def.get('table_prefix', "")
-
-        insert_stmt = 'REPLACE INTO ' + meta_table_name + \
-                      ' VALUES (%s, %s, %s)'
+        # ???
+        insert_stmt = 'UPDATE ' + meta_table_name + \
+                      ' SET table_name="%s", table_prefix="%s" where table_id="%s";'
         self.insert_stmt(insert_stmt,
-                         ('data_table', tables_def['data_table'],
-                          table_prefix))
+                         (tables_def['data_table'],
+                          table_prefix, 'data_table'))
         self.insert_stmt(insert_stmt,
-                         ('topics_table', tables_def['topics_table'],
-                          table_prefix))
+                         (tables_def['topics_table'],
+                          table_prefix, 'topics_table'))
         self.insert_stmt(
             insert_stmt,
-            ('meta_table', tables_def['meta_table'], table_prefix))
+            (tables_def['meta_table'], table_prefix, 'meta_table'))
         self.commit()
 
 def main(args):
