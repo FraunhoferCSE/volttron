@@ -45,12 +45,13 @@ class MonetSqlFuncts(DbDriver):
         TODO: add tests for existence. 
 
         """
-        rows = self.select("select name from sys.tables where system=0;", [])
-        print (rows)
-        #if rows:
-        #    _log.debug("Found table {}. Historian table exists".format(
-        #        self.data_table))
-        #    return
+        rows = map(
+            lambda x:x[0],
+            self.select("select name from sys.tables where system=0;", []))
+        if self.data_table in rows:
+            _log.debug("Found table {}. Historian table exists".format(
+                self.data_table))
+            return
         try:
             # posint of 6 ?  
             self.execute_stmt(
