@@ -46,6 +46,7 @@ class MonetSqlFuncts(DbDriver):
 
         """
         rows = self.select("select name from sys.tables where system=0;", [])
+        print (rows)
         #if rows:
         #    _log.debug("Found table {}. Historian table exists".format(
         #        self.data_table))
