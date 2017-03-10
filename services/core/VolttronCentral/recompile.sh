@@ -6,7 +6,7 @@
   pushd /home/volttron/volttron/services/core/VolttronCentral
 git pull
   volttron-ctl stop --tag vc &&  volttron-ctl remove --tag vc &
-  npm run build
+  npm run build-prod
   #-development
 #  nodejs node_modules/gulp/bin/gulp.js & 
 #  FOO_PID=$!
