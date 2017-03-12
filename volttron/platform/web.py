@@ -705,10 +705,10 @@ class MasterWebService(Agent):
         
         self.appContainer = WebApplicationWrapper(self, hostname, port)
         svr = WSGIServer((hostname, port), self.appContainer,
-                         keyfile = self.web_keyfile,
-                         certfile = self.web_certfile
-                         #keyfile="/home/volttron/letsencrypt.key",
-                         #certfile="/home/volttron/letsencrypt.crt"
+                         #keyfile = self.web_keyfile,
+                         #certfile = self.web_certfile
+                         keyfile="/home/sundial/volttronproj/sundial_private.key",
+                         certfile="/home/sundial/volttronproj/sundial_cacert.crt"
         )
         self._server_greenlet = gevent.spawn(svr.serve_forever)
 
