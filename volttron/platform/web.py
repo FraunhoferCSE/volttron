@@ -117,6 +117,7 @@ class DiscoveryInfo(object):
         self.discovery_address = kwargs.pop('discovery_address')
         self.vip_address = kwargs.pop('vip-address')
         self.serverkey = kwargs.pop('serverkey')
+
         assert len(kwargs) == 0
 
     @staticmethod
@@ -129,7 +130,10 @@ class DiscoveryInfo(object):
         :param web_address: An http(s) address with volttron running.
         :return:
         """
-
+	
+	_log = logging.getLogger(__name__)
+	_log.debug("IN DISCOVERY")
+	
         try:
             parsed = urlparse(web_address)
 
@@ -156,6 +160,8 @@ class DiscoveryInfo(object):
         except Exception as e:
             raise DiscoveryError("Unhandled exception {}".format(e))
 
+
+	_log.debug("Exit discovery.")
         return DiscoveryInfo(
             discovery_address=web_address, **(response.json()))
 
@@ -177,11 +183,13 @@ def is_ip_private(vip_address):
     """
     ip = vip_address.strip().lower().split("tcp://")[1]
 
+    #_log.info(ip)
+
     # https://en.wikipedia.org/wiki/Private_network
 
     priv_lo = re.compile("^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
     priv_24 = re.compile("^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
-    priv_20 = re.compile("^192\.168\.\d{1,3}.\d{1,3}$")
+    priv_20 = re.compile("^192\.168\.\d{1,3}.[0-9{1,3}.[0-9]{1,3}$")
     priv_16 = re.compile("^172.(1[6-9]|2[0-9]|3[0-1]).[0-9]{1,3}.[0-9]{1,3}$")
 
     return priv_lo.match(ip) is not None or priv_24.match(
@@ -297,18 +305,21 @@ class WebApplicationWrapper(object):
             self.masterweb.vip.rpc.call(identity, 'client.closed', endpoint)
 
     def create_ws_endpoint(self, endpoint, identity):
-        #_log.debug()print(endpoint, identity)
-        # if endpoint in self.endpoint_clients:
-        #     peers = self.masterweb.vip.peerlist.get()
-        #     old_identity = self._wsregistry[endpoint]
-        #     if old_identity not in peers:
-        #         for client in self.endpoint_clients.values():
-        #             client.close()
-        #         r
+        
+	 # TRJ -- Why is this commented out.  We are crashing.
+	 self._log.debug(endpoint,identity)
+ 	 #print(endpoint, identity)
+         if endpoint in self.endpoint_clients:
+             peers = self.masterweb.vip.peerlist.get()
+             old_identity = self._wsregistry[endpoint]
+             if old_identity not in peers:
+                 for client in self.endpoint_clients.values():
+                     client.close()
+         
 
-        if endpoint not in self.endpoint_clients:
-            self.endpoint_clients[endpoint] = set()
-        self._wsregistry[endpoint] = identity
+         if endpoint not in self.endpoint_clients:
+             self.endpoint_clients[endpoint] = set()
+         self._wsregistry[endpoint] = identity
 
     def destroy_ws_endpoint(self, endpoint):
         clients = self.endpoint_clients.get(endpoint, [])
