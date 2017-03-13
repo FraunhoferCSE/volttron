@@ -43,6 +43,7 @@ pydoc () {
 #fi
 export VOLTTRON_HOME=/home/sundial/.volttron
 
-volttron -vvvv -l /home/sundial/volttronproj/logs/volttron.log&
+volttron -vvvv &> /home/sundial/volttronproj/logs/volttron.log
+
 echo $! >pids/volttron.pid
 
