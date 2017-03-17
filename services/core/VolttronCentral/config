@@ -37,6 +37,12 @@
             "groups" : [
                 "reader, writer"
             ]
-        }
+        },
+	"tom" : {
+	    "password" : "6e1b9b3fe840680e37051f7ad5e959d6f39ad0f8885d855166f55c659469d3c8b78118c44a2a49c72ddb481cd6d8731034e11cc030070ba843a90b3495cb8d3e",
+	    "groups": [
+		"reader, writer"
+	    ]
+	}
     }
 }

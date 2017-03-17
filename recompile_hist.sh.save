@@ -1,0 +1,12 @@
+#!/bin/bash
+volttron-ctl stop --tag sql
+volttron-ctl remove --tag sql
+volttron-pkg package ./services/core/SQLHistorian
+volttron-pkg configure sqlhistorianangent-3.6.1 ./services/core/SQLHistorian/config
+volttron-ctl install --tag sql ~/.volttron/packaged/sqlhistorianagent-3.6.1-py2-none-any.whl
+
+#volttron-ctl config delete sqlhistorianagent-3.6.1 --all
+#volttron-ctl config store sqlhistorianagent-3.6.1 config ./services/core/SQLHistorian/config
+#volttron-ctl config list sqlhistorianagent-3.6.1
+#volttron-ctl start --tag  sql
+volttron-ctl status --tag sql

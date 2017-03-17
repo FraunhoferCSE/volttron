@@ -1,0 +1,6 @@
+{
+    "agentid": "scaffoldagent",
+    "message": "hello-scaffoldagent",
+    "log-level": "DEBUG"
+                # DEBUG, INFO, WARN, or ERROR
+}
