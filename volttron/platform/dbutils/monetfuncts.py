@@ -126,7 +126,7 @@ def main(args):
             'meta_table':'meta_test'
         })
     monet.setup_historian_tables()
-    monet.record_table_definitions()
+    #monet.record_table_definitions()
     
 if __name__ == '__main__':
     # Entry point for script
