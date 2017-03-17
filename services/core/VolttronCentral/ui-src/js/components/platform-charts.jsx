@@ -55,7 +55,7 @@ var PlatformCharts = React.createClass({
 
         for (var key in chartData)
         {
-            if (chartData[key].data.length > 0)
+            if (chartData[key].series.length > 0)
             {
                 var platformChart = (
                     <PlatformChart key={key} 

@@ -856,8 +856,7 @@ class VolttronCentralPlatform(Agent):
         return data or ""
 
     def start_agent(self, agent_uuid):
-        self.vip.rpc.call(CONTROL, "start_agent", agent_uuid).get(timeout=5)
-
+        return self.vip.rpc.call(CONTROL, "start_agent", agent_uuid).get(timeout=5)
 
     def stop_agent(self, agent_uuid):
         _log.debug("Stopping agent: {}".format(agent_uuid))

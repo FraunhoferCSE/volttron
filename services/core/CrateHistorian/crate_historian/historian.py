@@ -71,6 +71,7 @@ from dateutil.tz import tzutc
 from crate import client
 from volttron.platform.agent.utils import get_utc_seconds_from_epoch
 from volttron.platform.messaging.health import Status, STATUS_BAD
+from volttron.utils.docs import doc_inherit
 from zmq.utils import jsonapi
 
 from volttron.platform.agent import utils
@@ -187,6 +188,7 @@ class CrateHistorian(BaseHistorian):
 
         return "{schema}.{table}".format(schema=self._schema, table=table)
 
+    @doc_inherit
     def publish_to_historian(self, to_publish_list):
         _log.debug("publish_to_historian number of items: {}".format(
             len(to_publish_list)))
@@ -205,10 +207,9 @@ class CrateHistorian(BaseHistorian):
                 _log.debug('Waiting to attempt to write to database.')
                 return
 
-
         def insert_data(cursor, topic_id, ts, data, topic_name=None):
             target_table = self._topic_to_table_map[topic_id]
-            (schema_name, table_name) = target_table.split('.')
+            (schema_name, table_name) = target_table.split(".")
             insert_query = """INSERT INTO {} (topic_id, ts, result)
                               VALUES(?, ?, ?)
                               ON DUPLICATE KEY UPDATE result=result
@@ -219,13 +220,14 @@ class CrateHistorian(BaseHistorian):
 
             cursor.execute(insert_query, (topic_id, ts_formatted,
                                           data, data))
-            if self._raw_schema_enabled and table in ("datalogger", "device") and topic_name:
-                insert_query_raw = """INSERT INTO {}.{} (topic, ts, result)
+            if self._raw_schema_enabled and table_name in ("datalogger",
+                                                           "device") and topic_name:
+                insert_query_raw = """INSERT INTO "{}"."{}" (topic, ts, value)
                                 VALUES(?, ?, ?)
                                 ON DUPLICATE KEY UPDATE value=value
                                 """.format(schema_name, table_name + "_raw")
-                cursor.execute(insert_query_raw, (topic, ts_formatted,
-                                          data))
+                cursor.execute(insert_query_raw, (topic_name, ts_formatted,
+                                                  data))
 
         try:
             if self._connection is None:
@@ -410,6 +412,7 @@ cached.
         _log.debug("Real Query: " + real_query)
         return real_query, args
 
+    @doc_inherit
     def query_historian(self, topic, start=None, end=None, agg_type=None,
                         agg_period=None, skip=0, count=None,
                         order="FIRST_TO_LAST"):
@@ -524,6 +527,7 @@ cached.
 
         return results
 
+    @doc_inherit
     def query_topic_list(self):
         _log.debug("Querying topic list")
         cursor = self.get_connection().cursor()
@@ -537,6 +541,7 @@ cached.
         results = [x[0] for x in cursor.fetchall()]
         return results
 
+    @doc_inherit
     def query_topics_metadata(self, topics):
         pass
         # meta = {}
@@ -600,6 +605,7 @@ cached.
                                               error_trace=True)
         return self._connection
 
+    @doc_inherit
     def historian_setup(self):
         try:
             _log.debug("HISTORIAN SETUP")
