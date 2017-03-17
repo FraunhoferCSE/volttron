@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# unset irrelevant variables
+## TRJ - Command below was generating an error
+##deactivate nondestructive
+
+VIRTUAL_ENV="/home/sundial/volttronproj/env"
+export VIRTUAL_ENV
+
+_OLD_VIRTUAL_PATH="$PATH"
+PATH="$VIRTUAL_ENV/bin:$PATH"
+export PATH
+
+# unset PYTHONHOME if set
+if ! [ -z "${PYTHONHOME+_}" ] ; then
+    _OLD_VIRTUAL_PYTHONHOME="$PYTHONHOME"
+    unset PYTHONHOME
+fi
+
+if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT-}" ] ; then
+    _OLD_VIRTUAL_PS1="$PS1"
+    if [ "x(volttron)" != x ] ; then
+        PS1="(volttron)$PS1"
+    else
+        PS1="(`basename \"$VIRTUAL_ENV\"`) $PS1"
+    fi
+    export PS1
+fi
+
+# Make sure to unalias pydoc if it's already there
+alias pydoc 2>/dev/null >/dev/null && unalias pydoc
+
+pydoc () {
+    python -m pydoc "$@"
+}
+
+## TRJ -- Sounds like we dont need it in our volttron launcher
+## This should detect bash and zsh, which have a hash command that must
+## be called to get it to forget past commands.  Without forgetting
+## past commands the $PATH changes we made may not be respected
+#if [ -n "${BASH-}" ] || [ -n "${ZSH_VERSION-}" ] ; then
+#    hash -r 2>/dev/null
+#fi
+export VOLTTRON_HOME=/home/sundial/.volttron
+
+volttron -vvvv &> /home/sundial/volttronproj/logs/volttron.log
+
+echo $! >pids/volttron.pid
+

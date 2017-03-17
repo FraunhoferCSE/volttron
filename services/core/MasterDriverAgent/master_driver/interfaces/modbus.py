@@ -164,9 +164,7 @@ class ModbusByteRegister(ModbusRegisterBase):
     
    
     def get_state(self, client):
-        #if self.read_only:
-        #    response = client.read_input_registers(self.address, count=self.get_register_count(), unit=self.slave_id)
-        #else:
+	_log.debug("get_state-interfaces-read-holding-registers")
         response = client.read_holding_registers(self.address, count=self.get_register_count(), unit=self.slave_id)
             
         if response is None:
@@ -271,7 +269,8 @@ class Interface(BasicRevert, BaseInterface):
 
             for group in xrange(start, end + 1, MODBUS_READ_MAX):
                 count = min(end - group + 1, MODBUS_READ_MAX)
-                response = client.read_input_registers(group, count, unit=self.slave_id) if read_only else client.read_holding_registers(group, count, unit=self.slave_id)
+                #response = client.read_input_registers(group, count, unit=self.slave_id) if read_only else
+		response = client.read_holding_registers(group, count, unit=self.slave_id)
                 if response is None:
                     raise ModbusInterfaceException("pymodbus returned None")
                 response_bytes = response.encode()

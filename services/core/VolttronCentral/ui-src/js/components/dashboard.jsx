@@ -12,8 +12,6 @@ var Dashboard = React.createClass({
     getInitialState: function () {
         var state = getStateFromStores();
 
-        this._reloadPageTimeout = setTimeout(this._reloadPage, reloadPageInterval);
-
         return state;
     },
     componentDidMount: function () {
@@ -27,7 +25,6 @@ var Dashboard = React.createClass({
         this.setState(getStateFromStores());
     },
     _reloadPage: function () {
-        //Reload page to clear leaked memory
         location.reload(true);
     },
     render: function () {
@@ -37,7 +34,7 @@ var Dashboard = React.createClass({
         var platformCharts = [];
 
         pinnedCharts.forEach(function (pinnedChart) {
-            if (pinnedChart.data.length > 0)
+            if (pinnedChart.series.length > 0)
             {
                 var platformChart = <PlatformChart key={pinnedChart.chartKey} chart={pinnedChart} chartKey={pinnedChart.chartKey} hideControls={true}/>
                 platformCharts.push(platformChart);
