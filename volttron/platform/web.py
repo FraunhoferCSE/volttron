@@ -707,8 +707,10 @@ class MasterWebService(Agent):
         svr = WSGIServer((hostname, port), self.appContainer,
                          #keyfile = self.web_keyfile,
                          #certfile = self.web_certfile
-                         keyfile="/home/sundial/volttronproj/sundial_private.key",
-                         certfile="/home/sundial/volttronproj/sundial_cacert.crt"
+                         keyfile=(self.web_keyfile if self.web_keyfile else
+                                  "/home/sundial/volttronproj/sundial_private.key"),
+                         certfile=(self.web_certfile if self.web_certfile else
+                                   "/home/sundial/volttronproj/sundial_cacert.crt")
         )
         self._server_greenlet = gevent.spawn(svr.serve_forever)
 
