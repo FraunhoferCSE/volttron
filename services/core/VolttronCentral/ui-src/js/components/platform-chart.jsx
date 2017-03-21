@@ -467,7 +467,7 @@ var GraphLineChart = OutsideClick(React.createClass({
       }
 
       var convertTitle = function (tooltipItem, data) {
-          return moment(Number(tooltipItem[0].xLabel)).format('MMM dd, YYYY, h:mm:ss a');
+          return moment(Number(tooltipItem[0].xLabel)).format('MMM DD, YYYY, h:mm:ss a');
       };
 
       var options = {

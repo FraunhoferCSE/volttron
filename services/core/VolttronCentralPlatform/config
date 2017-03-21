@@ -1,3 +1,4 @@
 {
-
+ "volttron_central_address":"https://localhost:8080/",
+ "volttron-central-address":"https://localhost:8080/"
 }
