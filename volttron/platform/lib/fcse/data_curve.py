@@ -54,7 +54,7 @@ class DataCurve(object):
             nxdt = dt + isodate.parse_duration(v["duration"])
                                         
         return cls(
-            pandas.Series(dict([ v["dtstart"],v["value"] for v in values])),
+            pandas.Series(dict([ (v["dtstart"],v["value"]) for v in values])),
             duration,
             unit)
 
@@ -66,7 +66,7 @@ class DataCurve(object):
        
         """
         unit = msg[key]["Units"]
-        readings = msg[key]["Readings"])
+        readings = msg[key]["Readings"]
         # make sure they are in sorted order, don't assume. 
         readings.sort(key=lambda x:x[0])
         if len(values) <= 1 :
