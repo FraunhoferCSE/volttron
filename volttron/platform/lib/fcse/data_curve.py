@@ -69,7 +69,7 @@ class DataCurve(object):
         readings = msg["values"]
         # make sure they are in sorted order, don't assume. 
         readings.sort(key=lambda x:x[0])
-        if len(values) <= 1 :
+        if len(readings) <= 1 :
             raise ValueError, "Minimum length: 2"
         duration = isodate.duration_isoformat(
             isodate.parse_datetime(readings[1][0])-
