@@ -307,14 +307,13 @@ class WebApplicationWrapper(object):
     def create_ws_endpoint(self, endpoint, identity):
         
 	 # TRJ -- Why is this commented out.  We are crashing.
-	 self._log.debug(endpoint,identity)
- 	 #print(endpoint, identity)
-         if endpoint in self.endpoint_clients:
-             peers = self.masterweb.vip.peerlist.get()
-             old_identity = self._wsregistry[endpoint]
-             if old_identity not in peers:
-                 for client in self.endpoint_clients.values():
-                     client.close()
+	 #self._log.debug("endpoint %s identity %s"%(endpoint,identity))
+         #if endpoint in self.endpoint_clients:
+         #    peers = self.masterweb.vip.peerlist.list().get()
+         #    old_identity = self._wsregistry[endpoint]
+         #    if old_identity not in peers:
+         #        for client in self.endpoint_clients.values():
+         #            client.close()
          
 
          if endpoint not in self.endpoint_clients:
@@ -707,10 +706,11 @@ class MasterWebService(Agent):
         svr = WSGIServer((hostname, port), self.appContainer,
                          #keyfile = self.web_keyfile,
                          #certfile = self.web_certfile
-                         keyfile=(self.web_keyfile if self.web_keyfile else
-                                  "/home/sundial/volttronproj/sundial_private.key"),
-                         certfile=(self.web_certfile if self.web_certfile else
-                                   "/home/sundial/volttronproj/sundial_cacert.crt")
+                         keyfile=self.web_keyfile ,#if self.web_keyfile else
+                         #"/home/sund3ial/volttronproj/sundial_private.key"),
+                         certfile=self.web_certfile
+                         # if self.web_certfile else
+                         #"/home/sundial/volttronproj/sundial_cacert.crt")
         )
         self._server_greenlet = gevent.spawn(svr.serve_forever)
 
