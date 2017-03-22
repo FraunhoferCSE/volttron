@@ -27,7 +27,7 @@ class DataCurve(object):
     def __init__(self,values,duration=None,unit=None):
         self.values = values
         self.duration=duration
-        self.unit=self.UNITS.get(unit.lc(),unit)
+        self.unit=self.UNITS.get(unit.lower(),unit)
         
     @classmethod 
     def from_ipkeys (cls , values, **kwargs):
