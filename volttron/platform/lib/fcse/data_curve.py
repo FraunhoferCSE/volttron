@@ -65,8 +65,8 @@ class DataCurve(object):
         Volttron historian. 
        
         """
-        unit = msg[key]["Units"]
-        readings = msg[key]["Readings"]
+        unit = msg["metadata"]["units"]
+        readings = msg["values"]
         # make sure they are in sorted order, don't assume. 
         readings.sort(key=lambda x:x[0])
         if len(values) <= 1 :
