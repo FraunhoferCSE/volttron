@@ -59,7 +59,7 @@ class DataCurve(object):
             unit)
 
     @classmethod
-    def from_historian(cls,msg,key,**kwargs):
+    def from_historian(cls,msg,**kwargs):
         """
         Presumes data either from the CPR agent or the 
         Volttron historian. 
