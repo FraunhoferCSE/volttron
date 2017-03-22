@@ -77,7 +77,7 @@ class DataCurve(object):
         values = pandas.Series(dict(readings))
         return cls(values,duration, unit)
 
-    def __neg__self(self):
+    def __neg__(self):
         return self.__class__(
             -self.values ,
             self.duration,
