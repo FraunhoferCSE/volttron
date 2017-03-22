@@ -77,7 +77,12 @@ class DataCurve(object):
         values = pandas.Series(dict(readings))
         return cls(values,duration, unit)
 
-
+    def __neg__self(self):
+        return self.__class__(
+            -self.values ,
+            self.duration,
+            self.unit)
+        
     def __add__(self,other):
         if self.unit != other.unit:
             raise ValueError, "Units don't match"
