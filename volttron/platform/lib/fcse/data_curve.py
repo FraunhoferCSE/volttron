@@ -1,6 +1,8 @@
 import datetime,isodate
 import sys,os
 import pandas
+#import pint
+#UREG = pint.UnitRegistry()
 
 class DataCurve(object): 
     """
@@ -12,7 +14,9 @@ class DataCurve(object):
     or a curve of kwh from CPR, or who knows what. 
 
     """
+    # Data curves that represent a snapshot at a point in time. 
     OBSERVATION = ("kW", "W", "V")
+    # curves that represent an observation over an interval. 
     CUMULATIVE = ("kWH","WH")
     
     # sanity check the values.
@@ -20,8 +24,7 @@ class DataCurve(object):
         "kw":"kW",
         "w":"W",
         "v":"V",
-        "kwh":"kWH",
-        
+        "kwh":"kWh",        
     }
 
     def __init__(self,values,duration=None,unit=None):
@@ -77,6 +80,33 @@ class DataCurve(object):
         values = pandas.Series(dict(readings))
         return cls(values,duration, unit)
 
+    def to_kW(self):
+        """
+        Convert a Watt-Hour curve into Watts, doing 
+        the math. 
+        """
+        if self.unit != 'kWh':
+            raise ValueError("Can't do this conversion yet: %s to kW"self.unit)
+        if self.duration is None:
+            raise ValueError("Can;t do it with non-uniformly-spaced curves yet")
+
+        values = self.values * 3600 / isodate.parse_duration(self.duration).seconds
+        return self.__class__(values, duration, "kW")
+
+    def to_kWh(self):
+        """
+        Convert a Watt-Hour curve into Watts, doing 
+        the math. 
+        """
+        if self.unit != 'kW':
+            raise ValueError("Can't do this conversion yet: %s to kW"self.unit)
+        if self.duration is None:
+            raise ValueError("Can;t do it with non-uniformly-spaced curves yet")
+
+        values = self.values * isodate.parse_duration(self.duration).seconds / 3600
+        return self.__class__(values, duration, "kWh")
+    
+
     def __neg__(self):
         return self.__class__(
             -self.values ,
@@ -88,6 +118,14 @@ class DataCurve(object):
             raise ValueError, "Units don't match"
         return self.__class__(
             self.values + other.values,
+            None,
+            self.unit)
+    
+    def __sub__(self,other):
+        if self.unit != other.unit:
+            raise ValueError, "Units don't match"
+        return self.__class__(
+            self.values - other.values,
             None,
             self.unit)
     
