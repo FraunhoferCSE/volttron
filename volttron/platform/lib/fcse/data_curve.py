@@ -80,6 +80,19 @@ class DataCurve(object):
         values = pandas.Series(dict(readings))
         return cls(values,duration, unit)
 
+    def to_historian(self,key):
+        """
+        Assemble for the IEB in Volttron. 
+        """
+        ret =  {                
+            key :{
+                "Readings": list(self.values.iteritems()),
+                "Units":self.unit,
+                "tz":"UTC",
+                "data_type":"float"
+            }
+        }
+
     def to_kW(self):
         """
         Convert a Watt-Hour curve into Watts, doing 
