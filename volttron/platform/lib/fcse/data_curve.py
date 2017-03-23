@@ -86,9 +86,9 @@ class DataCurve(object):
         the math. 
         """
         if self.unit != 'kWh':
-            raise ValueError("Can't do this conversion yet: %s to kW"self.unit)
+            raise ValueError("Can't do this conversion yet: %s to kW"%self.unit)
         if self.duration is None:
-            raise ValueError("Can;t do it with non-uniformly-spaced curves yet")
+            raise ValueError("Can't do it with non-uniformly-spaced curves yet")
 
         values = self.values * 3600 / isodate.parse_duration(self.duration).seconds
         return self.__class__(values, duration, "kW")
@@ -99,9 +99,9 @@ class DataCurve(object):
         the math. 
         """
         if self.unit != 'kW':
-            raise ValueError("Can't do this conversion yet: %s to kW"self.unit)
+            raise ValueError("Can't do this conversion yet: %s to kWh"%self.unit)
         if self.duration is None:
-            raise ValueError("Can;t do it with non-uniformly-spaced curves yet")
+            raise ValueError("Can't do it with non-uniformly-spaced curves yet")
 
         values = self.values * isodate.parse_duration(self.duration).seconds / 3600
         return self.__class__(values, duration, "kWh")
@@ -129,3 +129,5 @@ class DataCurve(object):
             None,
             self.unit)
     
+def main(args):
+    pass
