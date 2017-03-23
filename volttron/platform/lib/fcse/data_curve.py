@@ -92,6 +92,7 @@ class DataCurve(object):
                 "data_type":"float"
             }
         }
+        return ret
 
     def to_kW(self):
         """
