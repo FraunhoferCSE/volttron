@@ -132,7 +132,8 @@ class DataCurve(object):
             raise ValueError, "Units don't match"
         return self.__class__(
             self.values + other.values,
-            None,
+            (self.duration if self.duration is other.duration
+             else None),
             self.unit)
     
     def __sub__(self,other):
@@ -140,7 +141,8 @@ class DataCurve(object):
             raise ValueError, "Units don't match"
         return self.__class__(
             self.values - other.values,
-            None,
+            (self.duration if self.duration is other.duration
+             else None),
             self.unit)
     
 def main(args):
