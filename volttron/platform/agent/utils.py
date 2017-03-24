@@ -77,7 +77,7 @@ from dateutil.parser import parse
 from dateutil.tz import tzutc, tzoffset
 from tzlocal import get_localzone
 from zmq.utils import jsonapi
-
+import json
 try:
     from ..lib.inotify.green import inotify, IN_MODIFY
 except AttributeError:
@@ -300,7 +300,7 @@ class JsonFormatter(logging.Formatter):
         exc_info = dct.pop('exc_info', None)
         if exc_info:
             dct['exc_text'] = ''.join(traceback.format_exception(*exc_info))
-        return jsonapi.dumps(dct)
+        return json.dumps(dct)
 
 
 class AgentFormatter(logging.Formatter):
