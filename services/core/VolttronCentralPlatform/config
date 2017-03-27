@@ -1,4 +1,4 @@
 {
- "volttron_central_address":"https://localhost:8080/",
- "volttron-central-address":"https://localhost:8080/"
+ "volttron_central_address":"https://pnpserver.cse.fraunhofer.org:8080/",
+ "volttron-central-address":"https://pnpserver.cse.fraunhofer.org:8080/"
 }

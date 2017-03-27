@@ -3,6 +3,11 @@ import sys,os
 import pandas
 #import pint
 #UREG = pint.UnitRegistry()
+import pprint
+import logging
+
+_log = logging.getLogger(os.path.basename(sys.argv[0])
+                                                  if __name__ == '__main__' else __name__)
 
 class DataCurve(object): 
     """
@@ -29,7 +34,10 @@ class DataCurve(object):
 
     def __init__(self,values,duration=None,unit=None):
         self.values = values
-        self.duration=duration
+        if duration is not None:
+            self.duration=isodate.duration_isoformat(isodate.parse_duration(duration))
+        else:
+            self.duration=None
         self.unit=self.UNITS.get(unit.lower(),unit)
         
     @classmethod 
@@ -42,19 +50,24 @@ class DataCurve(object):
         unit = set( [v["unit"] for v in values])
         if  len(unit)!=1:
             raise ValueError( "Inconsistent units. We can't deal.")
-        unit = v[0]["unit"]
+        unit = values[0]["unit"]
 
-        duration = ( v[0]["duration"] if len(set( [v["unit"] for v in values])) == 1 else None)
+        duration = ( values[0]["duration"] if len(set( [v["duration"] for v in values])) == 1 else None)
         
         values.sort(key=lambda x:x["dtstart"])
         if len(values) <= 1:
             raise ValueError( "Minimum length: 2")
         nxtdt = isodate.parse_datetime(values[0]["dtstart"]) + isodate.parse_duration(values[0]["duration"])
-        for v in values[1:]:
+        # Overlapping or gapping intervals at 2017-03-25T04:00:00 - 2017-03-25 05:00:00 - 0 - 2017-03-25T04:00:00 - PT1H\n')
+        #print (len(values),0, values[0])
+        for i,v in enumerate(values[1:]):
+            #print(len(values),i+1, v)
             dt = isodate.parse_datetime(v["dtstart"])
-            if nxtdt != v:
-                raise ValueError( "Overlapping or gapping intervals at {}".format(v["dtstart"]))
-            nxdt = dt + isodate.parse_duration(v["duration"])
+            if nxtdt != dt:
+                raise ValueError( "Overlapping or gapping intervals at dt {} - nxtdt {} - i {}\n - dtstart {} - duration {}".format(
+                    dt, nxtdt,i+1,
+                    values[i]["dtstart"],  values[i]["duration"],  ))
+            nxtdt = dt + isodate.parse_duration(v["duration"])
                                         
         return cls(
             pandas.Series(dict([ (v["dtstart"],v["value"]) for v in values])),
@@ -105,7 +118,7 @@ class DataCurve(object):
             raise ValueError("Can't do it with non-uniformly-spaced curves yet")
 
         values = self.values * 3600 / isodate.parse_duration(self.duration).seconds
-        return self.__class__(values, duration, "kW")
+        return self.__class__(values, self.duration, "kW")
 
     def to_kWh(self):
         """
