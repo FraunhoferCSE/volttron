@@ -112,6 +112,8 @@ class DataCurve(object):
         Convert a Watt-Hour curve into Watts, doing 
         the math. 
         """
+        if self.unit is 'kW':
+            return self
         if self.unit != 'kWh':
             raise ValueError("Can't do this conversion yet: %s to kW"%self.unit)
         if self.duration is None:
