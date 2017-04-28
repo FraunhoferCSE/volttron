@@ -81,7 +81,7 @@ class DataCurve(object):
         Volttron historian. 
        
         """
-        unit = msg["metadata"]["units"]
+        unit = msg["metadata"].get("units","NONE")
         readings = msg["values"]
         # make sure they are in sorted order, don't assume. 
         readings.sort(key=lambda x:x[0])
