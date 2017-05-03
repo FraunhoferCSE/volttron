@@ -235,6 +235,28 @@ class MonetSqlFuncts(DbDriver):
             _log.debug("query result values {}".format(values))
         return values
         
+    def insert_meta(self, topic_id, metadata):
+        """
+        Inserts metadata for topic
+
+        :param topic_id: topic id for which metadata is inserted
+        :param metadata: metadata
+        :return: True if execution completes. False if unable to connect to
+                 database
+        """
+        if not self.__connect():
+            return False
+        try: 
+            self.__cursor.execute(
+                 '''REPLACE INTO ''' + self.meta_table + ''' values(%s, %s)'''
+                (topic_id, jsonapi.dumps(metadata)))
+        except Exception as e:
+            print (e)
+            self.__cursor.execute(
+                "update "+ self.meta_table "set metadata=%s where topic_id=%s ",
+                (jsonapi.dumps(metadata), topic_id))
+            
+        return True
         
 
 def main(args):
@@ -257,6 +279,8 @@ def main(args):
                     end = isodate.parse_datetime('2017-04-22T18:55:00'),
 
         )
+        monet.insert_meta(1,{'foo':'bar'})
+
     except Exception as e:
         print e
         #monet.execute_stmt("drop table " + defs['data_table']+' ;')
