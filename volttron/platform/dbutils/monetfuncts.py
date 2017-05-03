@@ -92,6 +92,7 @@ class MonetSqlFuncts(DbDriver):
         rows = map(
             lambda x:x[0],
             self.select("select name from sys.tables where system=0;", []))
+        table_prefix = tables_def.get('table_prefix', "")
         if meta_table_name not in rows:
             _log.debug("Found table {}. Historian table exists".format(
                 self.data_table))
@@ -100,19 +101,20 @@ class MonetSqlFuncts(DbDriver):
                 ' (table_id varchar(512) PRIMARY KEY, \
                 table_name varchar(512) NOT NULL, \
                 table_prefix varchar(512));')
-            
-        table_prefix = tables_def.get('table_prefix', "")
-        insert_stmt = 'UPDATE ' + meta_table_name + \
-                      " SET table_name=%s, table_prefix=%s where table_id=%s ;"
-        self.insert_stmt(insert_stmt,
-                         (tables_def['data_table'],
-                          table_prefix, 'data_table'))
-        self.insert_stmt(insert_stmt,
-                         (tables_def['topics_table'],
-                          table_prefix, 'topics_table'))
-        self.insert_stmt(
-            insert_stmt,
-            (tables_def['meta_table'], table_prefix, 'meta_table'))
+            insert_stmt = 'INSERT INTO ' + meta_table_name + \
+                          " VALUES (%s, %s %s );"
+            for k in ['data_table','topics_table','meta_table']:
+                self.insert_stmt(insert_stmt,
+                             (k,
+                              tables_def[k],
+                              table_prefix))
+        else:
+            insert_stmt = 'UPDATE ' + meta_table_name + \
+                          " SET table_name=%s, table_prefix=%s where table_id=%s ;"
+            for k in ['data_table','topics_table','meta_table']:
+                self.insert_stmt(insert_stmt,
+                             (tables_def[k],
+                              table_prefix, k))
         self.commit()
 
     # thus far. 
