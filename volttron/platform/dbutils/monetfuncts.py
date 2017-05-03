@@ -119,6 +119,7 @@ class MonetSqlFuncts(DbDriver):
         
     def setup_aggregate_historian_tables(self, meta_table_name):
         table_names = self.read_tablenames_from_db(meta_table_name)
+        print(table_names)
         self.data_table = table_names['data_table']
         self.topics_table = table_names['topics_table']
         _log.debug("In setup_aggregate_historian self.topics_table"
@@ -149,19 +150,27 @@ class MonetSqlFuncts(DbDriver):
         _log.debug("Created aggregate topics and meta tables")
 
 def main(args):
-    defs =         {
-        'data_table':'data_test_c',
-        'topics_table':'topics_test_c',
-        'meta_table':'meta_test_c',
-        "table_prefix":"meta_"
-    }
-    monet = MonetSqlFuncts(
-        { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
-        defs)
-    monet.setup_historian_tables()
-    monet.record_table_definitions( defs, "volttron_table_definitions")
-    monet.setup_aggregate_historian_tables("meta_test")
-    
+    try:
+        defs =         {
+            'data_table':'data_test_c',
+            'topics_table':'topics_test_c',
+            'meta_table':'meta_test_c',
+            "table_prefix":"meta_"
+        }
+        monet = MonetSqlFuncts(
+            { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
+            defs)
+        _log.setLevel(logging.DEBUG)
+        monet.setup_historian_tables()
+        monet.record_table_definitions( defs, "volttron_table_definitions")
+        monet.setup_aggregate_historian_tables("volttron_table_definitions")
+    except Exception as e:
+        print e
+        monet.execute_stmt("drop table " + defs['data_table']+' ;')
+        monet.execute_stmt("drop table " + defs['meta_table']+' ;')
+        monet.execute_stmt("drop table " + defs['topics_table']+' ;')
+        monet.execute_stmt("drop table volttron_table_definitions;")
+        raise e
 if __name__ == '__main__':
     # Entry point for script
     main(sys.argv)
