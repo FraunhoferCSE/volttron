@@ -105,7 +105,7 @@ class MonetSqlFuncts(DbDriver):
         table_prefix = tables_def.get('table_prefix', "")
         # ???
         insert_stmt = 'UPDATE ' + meta_table_name + \
-                      ' SET table_name="%s", table_prefix="%s" where table_id="%s";'
+                      " SET table_name=%s, table_prefix=%s where table_id=%s ;"
         self.insert_stmt(insert_stmt,
                          (tables_def['data_table'],
                           table_prefix, 'data_table'))
@@ -118,15 +118,17 @@ class MonetSqlFuncts(DbDriver):
         self.commit()
 
 def main(args):
+    defs =         {
+        'data_table':'data_test_a',
+        'topics_table':'topics_tes_a',
+        'meta_table':'meta_test_a',
+        "table_prefix":"meta_"
+    }
     monet = MonetSqlFuncts(
         { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
-        {
-            'data_table':'data_test',
-            'topics_table':'topics_test',
-            'meta_table':'meta_test'
-        })
-    monet.setup_historian_tables()
-    #monet.record_table_definitions()
+        defs)
+    #monet.setup_historian_tables()
+    monet.record_table_definitions( defs, "volttron_table_definitions")
     
 if __name__ == '__main__':
     # Entry point for script
