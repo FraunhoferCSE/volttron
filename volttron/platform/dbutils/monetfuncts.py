@@ -154,9 +154,9 @@ class MonetSqlFuncts(DbDriver):
 def main(args):
     try:
         defs =         {
-            'data_table':'data_test_c',
-            'topics_table':'topics_test_c',
-            'meta_table':'meta_test_c',
+            'data_table':'data',
+            'topics_table':'topics',
+            'meta_table':'meta',
             "table_prefix":"meta_"
         }
         monet = MonetSqlFuncts(
@@ -168,9 +168,9 @@ def main(args):
         monet.setup_aggregate_historian_tables("volttron_table_definitions")
     except Exception as e:
         print e
-        monet.execute_stmt("drop table " + defs['data_table']+' ;')
-        monet.execute_stmt("drop table " + defs['meta_table']+' ;')
-        monet.execute_stmt("drop table " + defs['topics_table']+' ;')
+        #monet.execute_stmt("drop table " + defs['data_table']+' ;')
+        #monet.execute_stmt("drop table " + defs['meta_table']+' ;')
+        #monet.execute_stmt("drop table " + defs['topics_table']+' ;')
         #monet.execute_stmt("drop table volttron_table_definitions;")
         raise e
 if __name__ == '__main__':
