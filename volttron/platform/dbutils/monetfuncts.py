@@ -86,7 +86,6 @@ class MonetSqlFuncts(DbDriver):
                       "statements"
 
             raise RuntimeError(err_msg + ',' + repr(err))
-    # thus far. 
     def record_table_definitions(self, tables_def, meta_table_name):
         _log.debug(
             "In record_table_def {} {}".format(tables_def, meta_table_name))
@@ -103,7 +102,6 @@ class MonetSqlFuncts(DbDriver):
                 table_prefix varchar(512));')
             
         table_prefix = tables_def.get('table_prefix', "")
-        # ???
         insert_stmt = 'UPDATE ' + meta_table_name + \
                       " SET table_name=%s, table_prefix=%s where table_id=%s ;"
         self.insert_stmt(insert_stmt,
@@ -117,6 +115,39 @@ class MonetSqlFuncts(DbDriver):
             (tables_def['meta_table'], table_prefix, 'meta_table'))
         self.commit()
 
+    # thus far. 
+        
+    def setup_aggregate_historian_tables(self, meta_table_name):
+        table_names = self.read_tablenames_from_db(meta_table_name)
+        self.data_table = table_names['data_table']
+        self.topics_table = table_names['topics_table']
+        _log.debug("In setup_aggregate_historian self.topics_table"
+                   " {}".format(self.topics_table))
+        self.meta_table = table_names['meta_table']
+        self.agg_topics_table = table_names.get('agg_topics_table', None)
+        self.agg_meta_table = table_names.get('agg_meta_table', None)
+        rows = map(
+            lambda x:x[0],
+            self.select("select name from sys.tables where system=0;", []))
+        if self.agg_topics_table not in rows:
+
+            self.execute_stmt(
+                'CREATE TABLE IF NOT EXISTS ' + self.agg_topics_table +
+                ' (agg_topic_id INTEGER NOT NULL AUTO_INCREMENT, \
+                agg_topic_name varchar(512) NOT NULL, \
+                agg_type varchar(512) NOT NULL, \
+                agg_time_period varchar(512) NOT NULL, \
+                PRIMARY KEY (agg_topic_id), \
+                UNIQUE(agg_topic_name, agg_type, agg_time_period));')
+        if self.agg_meta_table not in rows:
+            self.execute_stmt(
+                'CREATE TABLE IF NOT EXISTS ' + self.agg_meta_table +
+                '(agg_topic_id INTEGER NOT NULL, \
+                metadata TEXT NOT NULL, \
+                PRIMARY KEY(agg_topic_id));')
+            
+        _log.debug("Created aggregate topics and meta tables")
+
 def main(args):
     defs =         {
         'data_table':'data_test_a',
@@ -127,8 +158,9 @@ def main(args):
     monet = MonetSqlFuncts(
         { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
         defs)
-    #monet.setup_historian_tables()
+    monet.setup_historian_tables()
     monet.record_table_definitions( defs, "volttron_table_definitions")
+    monet.setup_aggregate_historian_tables("meta_test")
     
 if __name__ == '__main__':
     # Entry point for script
