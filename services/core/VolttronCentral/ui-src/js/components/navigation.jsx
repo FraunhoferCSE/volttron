@@ -69,9 +69,11 @@ var Navigation = React.createClass({
                     <span className="logo__beta">BETA</span>
                     <span className="logo__funding">Funded by DOE EERE BTO</span>
                 </h1>
+		<span text-align="right">
+	 <img src="/img/fraunhofer_square.gif" height="40" align="right" text-align="top" />
                 {navItems}
+		</span>
 	    </span>
-	 <img src="/img/fraunhofer_square.gif" height="50" align="right" text-align="top" />
             </nav><br/>
 	    </div>
         );

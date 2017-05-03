@@ -1,4 +1,4 @@
-1;2c#!/bin/bash
+#!/bin/bash
 # Script for recompiling the React UI for Voltron
 #
 # Needs to run on the host, as volttron.
