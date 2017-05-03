@@ -102,7 +102,7 @@ class MonetSqlFuncts(DbDriver):
                 table_name varchar(512) NOT NULL, \
                 table_prefix varchar(512));')
             insert_stmt = 'INSERT INTO ' + meta_table_name + \
-                          " VALUES (%s, %s %s );"
+                          " VALUES (%s, %s, %s );"
             for k in ['data_table','topics_table','meta_table']:
                 self.insert_stmt(insert_stmt,
                              (k,
@@ -135,7 +135,7 @@ class MonetSqlFuncts(DbDriver):
         if self.agg_topics_table not in rows:
 
             self.execute_stmt(
-                'CREATE TABLE IF NOT EXISTS ' + self.agg_topics_table +
+                'CREATE TABLE ' + self.agg_topics_table +
                 ' (agg_topic_id INTEGER NOT NULL AUTO_INCREMENT, \
                 agg_topic_name varchar(512) NOT NULL, \
                 agg_type varchar(512) NOT NULL, \
@@ -144,7 +144,7 @@ class MonetSqlFuncts(DbDriver):
                 UNIQUE(agg_topic_name, agg_type, agg_time_period));')
         if self.agg_meta_table not in rows:
             self.execute_stmt(
-                'CREATE TABLE IF NOT EXISTS ' + self.agg_meta_table +
+                'CREATE TABLE ' + self.agg_meta_table +
                 '(agg_topic_id INTEGER NOT NULL, \
                 metadata TEXT NOT NULL, \
                 PRIMARY KEY(agg_topic_id));')
@@ -171,7 +171,7 @@ def main(args):
         monet.execute_stmt("drop table " + defs['data_table']+' ;')
         monet.execute_stmt("drop table " + defs['meta_table']+' ;')
         monet.execute_stmt("drop table " + defs['topics_table']+' ;')
-        monet.execute_stmt("drop table volttron_table_definitions;")
+        #monet.execute_stmt("drop table volttron_table_definitions;")
         raise e
 if __name__ == '__main__':
     # Entry point for script
