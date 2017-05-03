@@ -61,8 +61,8 @@ class MonetSqlFuncts(DbDriver):
                 value_string TEXT NOT NULL, \
                      UNIQUE(topic_id, ts))')
             
-            self.execute_stmt('''CREATE INDEX data_idx
-                                    ON ''' + self.data_table + ''' (ts)''')
+            #self.execute_stmt('''CREATE INDEX data_idx
+            #                        ON ''' + self.data_table + ''' (ts)''')
             self.execute_stmt('''CREATE TABLE ''' +
                               self.topics_table +
                               ''' (topic_id INTEGER NOT NULL AUTO_INCREMENT,
@@ -119,15 +119,15 @@ class MonetSqlFuncts(DbDriver):
 
 def main(args):
     defs =         {
-        'data_table':'data_test_a',
-        'topics_table':'topics_tes_a',
-        'meta_table':'meta_test_a',
+        'data_table':'data_test_c',
+        'topics_table':'topics_test_c',
+        'meta_table':'meta_test_c',
         "table_prefix":"meta_"
     }
     monet = MonetSqlFuncts(
         { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
         defs)
-    #monet.setup_historian_tables()
+    monet.setup_historian_tables()
     monet.record_table_definitions( defs, "volttron_table_definitions")
     
 if __name__ == '__main__':
