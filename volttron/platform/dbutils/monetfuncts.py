@@ -3,7 +3,7 @@ import logging
 from collections import defaultdict
 import monetdb.sql
 import sys
-import pytz
+import pytz,isodate
 import re
 from basedb import DbDriver
 from volttron.platform.agent import utils
@@ -34,7 +34,7 @@ class MonetSqlFuncts(DbDriver):
             self.agg_topics_table = table_names.get('agg_topics_table', None)
             self.agg_meta_table = table_names.get('agg_meta_table', None)
         # milliseconds work, though. 
-        self.MICROSECOND_SUPPORT = False
+        self.MICROSECOND_SUPPORT = True
         # .connect() method is the only thing used here. 
         super(MonetSqlFuncts, self).__init__(
             'monetdb.sql',
@@ -187,15 +187,16 @@ class MonetSqlFuncts(DbDriver):
         if start and end and start == end:
             where_clauses.append("ts = %s")
             args.append(start)
-        elif start:
-            where_clauses.append("ts >= %s")
-            args.append(start)
-        elif end:
-            where_clauses.append("ts < %s")
-            args.append(end)
-
+        else:
+            if start:
+                where_clauses.append("ts >= %s")
+                args.append(start)
+            if end:
+                where_clauses.append("ts < %s")
+                args.append(end)
+            
         where_statement = ' AND '.join(where_clauses)
-
+        print(where_statement)
         order_by = 'ORDER BY ts ASC'
         if order == 'LAST_TO_FIRST':
             order_by = ' ORDER BY topic_id DESC, ts DESC'
@@ -251,7 +252,11 @@ def main(args):
         #monet.setup_historian_tables()
         #monet.record_table_definitions( defs, "volttron_table_definitions")
         #monet.setup_aggregate_historian_tables("volttron_table_definitions")
-        monet.query(1, {1:'foo'})
+        monet.query([1], {1:'foo'},
+                    start = isodate.parse_datetime('2017-04-22T17:55:00'),
+                    end = isodate.parse_datetime('2017-04-22T18:55:00'),
+
+        )
     except Exception as e:
         print e
         #monet.execute_stmt("drop table " + defs['data_table']+' ;')
