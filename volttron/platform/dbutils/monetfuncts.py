@@ -151,6 +151,91 @@ class MonetSqlFuncts(DbDriver):
             
         _log.debug("Created aggregate topics and meta tables")
 
+    def query(self, topic_ids, id_name_map, start=None, end=None, skip=0,
+              agg_type=None,
+              agg_period=None, count=None, order="FIRST_TO_LAST"):
+
+        table_name = self.data_table
+        if agg_type and agg_period:
+            table_name = agg_type + "_" + agg_period
+
+        query = '''SELECT topic_id, ts, value_string
+                FROM ''' + table_name + '''
+                {where}
+                {order_by}
+                {limit}
+                {offset}'''
+        # this far:
+        # just have to harmonize with how MonetDB does finer timestamps.
+        
+        if self.MICROSECOND_SUPPORT is None:
+            self.init_microsecond_support()
+
+        where_clauses = ["WHERE topic_id = %s"]
+        args = [topic_ids[0]]
+
+        if start is not None:
+            if not self.MICROSECOND_SUPPORT:
+                start_str = start.isoformat()
+                start = start_str[:start_str.rfind('.')]
+
+        if end is not None:
+            if not self.MICROSECOND_SUPPORT:
+                end_str = end.isoformat()
+                end = end_str[:end_str.rfind('.')]
+
+        if start and end and start == end:
+            where_clauses.append("ts = %s")
+            args.append(start)
+        elif start:
+            where_clauses.append("ts >= %s")
+            args.append(start)
+        elif end:
+            where_clauses.append("ts < %s")
+            args.append(end)
+
+        where_statement = ' AND '.join(where_clauses)
+
+        order_by = 'ORDER BY ts ASC'
+        if order == 'LAST_TO_FIRST':
+            order_by = ' ORDER BY topic_id DESC, ts DESC'
+
+        # can't have an offset without a limit
+        # -1 = no limit and allows the user to
+        # provide just an offset
+        if count is None:
+            count = 100
+
+        limit_statement = 'LIMIT %s'
+        args.append(int(count))
+
+        offset_statement = ''
+        if skip > 0:
+            offset_statement = 'OFFSET %s'
+            args.append(skip)
+
+        _log.debug("About to do real_query")
+        values = defaultdict(list)
+        for topic_id in topic_ids:
+            args[0] = topic_id
+            real_query = query.format(where=where_statement,
+                                      limit=limit_statement,
+                                      offset=offset_statement,
+                                      order_by=order_by)
+            _log.debug("Real Query: " + real_query)
+            _log.debug("args: " + str(args))
+
+            rows = self.select(real_query, args)
+            if rows:
+                for _id, ts, value in rows:
+                    values[id_name_map[topic_id]].append(
+                        (utils.format_timestamp(ts.replace(tzinfo=pytz.UTC)),
+                         jsonapi.loads(value)))
+            _log.debug("query result values {}".format(values))
+        return values
+        
+        
+
 def main(args):
     try:
         defs =         {
@@ -163,9 +248,10 @@ def main(args):
             { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
             defs)
         _log.setLevel(logging.DEBUG)
-        monet.setup_historian_tables()
-        monet.record_table_definitions( defs, "volttron_table_definitions")
-        monet.setup_aggregate_historian_tables("volttron_table_definitions")
+        #monet.setup_historian_tables()
+        #monet.record_table_definitions( defs, "volttron_table_definitions")
+        #monet.setup_aggregate_historian_tables("volttron_table_definitions")
+        monet.query(1, {1:'foo'})
     except Exception as e:
         print e
         #monet.execute_stmt("drop table " + defs['data_table']+' ;')
