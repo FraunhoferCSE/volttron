@@ -264,7 +264,58 @@ class MonetSqlFuncts(DbDriver):
                    "{}".format(self.topics_table))
         return '''INSERT INTO ''' + self.topics_table + ''' (topic_name)
             VALUES (%s)'''
+    
+    def insert_data(self, ts, topic_id, data):
+        """
+        Inserts data for topic
 
+        :param ts: timestamp
+        :param topic_id: topic id for which data is inserted
+        :param metadata: data values
+        :return: True if execution completes. False if unable to connect to
+                 database
+        """
+        try:
+            self.insert_stmt(
+                '''INSERT INTO ''' + self.data_table + ''' values(%s, %s %s)''',
+                (ts, topic_id, jsonapi.dumps(data)))
+        except monetdb.sql.OperationalError as e:
+            self.rollback()
+            self.insert_stmt(
+                "update "+ self.data_table +
+                " set value_string=%s where topic_id=%s and ts=%s",
+                (jsonapi.dumps(data), topic_id,ts ))
+        self.commit()
+        return True
+            
+    def update_topic_query(self):
+        return '''UPDATE ''' + self.topics_table + ''' SET topic_name = %s
+            WHERE topic_id = %s'''
+    
+    def insert_agg_topic_stmt(self):
+        _log.debug("Insert aggregate topics stmt inserts "
+                   "into {}".format(self.agg_topics_table))
+        return '''INSERT INTO ''' + self.agg_topics_table + '''
+            (agg_topic_name, agg_type, agg_time_period )
+            values (%s, %s, %s)'''
+
+    def update_agg_topic_stmt(self):
+        return '''UPDATE ''' + self.agg_topics_table + ''' SET
+        agg_topic_name = %s WHERE agg_topic_id = %s '''
+
+    def get_topic_map(self):
+        q = "SELECT topic_id, topic_name FROM " + self.topics_table + ";"
+        rows = self.select(q, None)
+        _log.debug("loading topic map from db")
+        id_map = dict()
+        name_map = dict()
+        for t, n in rows:
+            id_map[n.lower()] = t
+            name_map[n.lower()] = n
+        _log.debug(id_map)
+        _log.debug(name_map)
+        return id_map, name_map
+            
 def main(args):
     try:
         defs =         {
