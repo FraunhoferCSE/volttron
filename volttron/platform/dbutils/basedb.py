@@ -261,7 +261,7 @@ class DbDriver(object):
             return False
 
         self.__cursor.execute(stmt, args)
-        return True
+        return self.__cursor.lastrowid
 
     def insert_meta(self, topic_id, metadata):
         """
