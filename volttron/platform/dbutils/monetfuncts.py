@@ -57,9 +57,8 @@ class MonetSqlFuncts(DbDriver):
             self.execute_stmt(
                 'CREATE TABLE ' + self.data_table +
                 ' (ts timestamp(3) NOT NULL,\
-                topic_id INTEGER NOT NULL, \
-                value_string TEXT NOT NULL, \
-                     UNIQUE(topic_id, ts))')
+                test_0_ TEXT NOT NULL, \
+                     UNIQUE( ts))')
             
             #self.execute_stmt('''CREATE INDEX data_idx
             #                        ON ''' + self.data_table + ''' (ts)''')
@@ -159,7 +158,7 @@ class MonetSqlFuncts(DbDriver):
         if agg_type and agg_period:
             table_name = agg_type + "_" + agg_period
 
-        query = '''SELECT topic_id, ts, value_string
+        query = '''SELECT ts, topic_{topic_id}_  
                 FROM ''' + table_name + '''
                 {where}
                 {order_by}
@@ -171,7 +170,7 @@ class MonetSqlFuncts(DbDriver):
         if self.MICROSECOND_SUPPORT is None:
             self.init_microsecond_support()
 
-        where_clauses = ["WHERE topic_id = %s"]
+        where_clauses = [] #"WHERE topic_id = %s"]
         args = [topic_ids[0]]
 
         if start is not None:
@@ -220,6 +219,7 @@ class MonetSqlFuncts(DbDriver):
         for topic_id in topic_ids:
             args[0] = topic_id
             real_query = query.format(where=where_statement,
+                                      topic_id=topic_id,
                                       limit=limit_statement,
                                       offset=offset_statement,
                                       order_by=order_by)
@@ -228,7 +228,7 @@ class MonetSqlFuncts(DbDriver):
 
             rows = self.select(real_query, args)
             if rows:
-                for _id, ts, value in rows:
+                for ts, value in rows:
                     values[id_name_map[topic_id]].append(
                         (utils.format_timestamp(ts.replace(tzinfo=pytz.UTC)),
                          jsonapi.loads(value)))
@@ -258,8 +258,35 @@ class MonetSqlFuncts(DbDriver):
         self.commit()
         return True
         
+    def insert_topic(self, topic_name):
+        """
+        Insert a new topic
 
+        :param topic: topic to insert
+        :return: id of the topic inserted if insert was successful.
+                 False if unable to connect to database
+        """
+        try:
+            ret = self.insert_stmt(
+                '''INSERT INTO ''' +
+                self.topics_table +
+                ''' ( topic_name) values (%s)''',
+                ( topic_name))
+            _log.debug("In insert_topic - self.topic_table "
+                       "{}".format(self.topics_table))
+            topic_id = ( if ret is not False )
+            _log.debug("Topic_id {}".format(topic_id))
+            self.commit()
+            self.insert_stmt(
+                '''ALTER TABLE '''+ self.data_table +
+                '''ADD COLUMN topic_%s_ TEXT ; ''',(topic_id))
+            self.commit()
+        except monetdb.sql.OperationalError as e:
+            self.rollback()
+            _log.error("ROLLBACK {}".format(e))
+        
     def insert_topic_query(self):
+        # XXX: alter table data add column
         _log.debug("In insert_topic_query - self.topic_table "
                    "{}".format(self.topics_table))
         return '''INSERT INTO ''' + self.topics_table + ''' (topic_name)
@@ -277,13 +304,15 @@ class MonetSqlFuncts(DbDriver):
         """
         try:
             self.insert_stmt(
-                '''INSERT INTO ''' + self.data_table + ''' values(%s, %s %s)''',
-                (ts, topic_id, jsonapi.dumps(data)))
+                '''INSERT INTO ''' +
+                self.data_table +
+                ''' (ts, topic_%s_) values (%s, %s)''',
+                ( topic_id, ts, jsonapi.dumps(data)))
         except monetdb.sql.OperationalError as e:
             self.rollback()
             self.insert_stmt(
                 "update "+ self.data_table +
-                " set value_string=%s where topic_id=%s and ts=%s",
+                " set topic_%s_=%s where ts=%s",
                 (jsonapi.dumps(data), topic_id,ts ))
         self.commit()
         return True
@@ -328,9 +357,11 @@ def main(args):
             { "username":"volttron","password":"shines","database":"volttron","hostname":"localhost"},
             defs)
         _log.setLevel(logging.DEBUG)
-        #monet.setup_historian_tables()
-        #monet.record_table_definitions( defs, "volttron_table_definitions")
-        #monet.setup_aggregate_historian_tables("volttron_table_definitions")
+        monet.setup_historian_tables()
+        monet.record_table_definitions( defs, "volttron_table_definitions")
+        monet.setup_aggregate_historian_tables("volttron_table_definitions")
+        monet.insert_topic("foo")
+        return
         monet.query([1], {1:'foo'},
                     start = isodate.parse_datetime('2017-04-22T17:55:00'),
                     end = isodate.parse_datetime('2017-04-22T18:55:00'),
@@ -338,7 +369,6 @@ def main(args):
         )
         #monet.__connect()
         monet.insert_meta(177,{'foo':'bar'})
-        monet.insert_topic("foo")
     except Exception as e:
         foo = (sys.exc_info())
         _log.info(traceback.extract_tb(foo[-1]))
