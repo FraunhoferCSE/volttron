@@ -1,0 +1,13 @@
+{
+    "agentid": "sqlhistorian-monet",
+    "connection": {
+        "type": "monet",
+        "params": {
+            "host": "localhost",
+            "port": 50000,
+            "database": "volttron",
+            "user": "volttron",
+            "passwd": "shines"
+        }
+    }
+}
