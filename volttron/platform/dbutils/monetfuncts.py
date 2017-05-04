@@ -8,7 +8,7 @@ import re
 from basedb import DbDriver
 from volttron.platform.agent import utils
 from zmq.utils import jsonapi
-
+import traceback
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class MonetSqlFuncts(DbDriver):
         super(MonetSqlFuncts, self).__init__(
             'monetdb.sql',
             **connect_params)
-
+        
     def setup_historian_tables(self):
         """
         TODO: add tests for existence. 
@@ -259,6 +259,12 @@ class MonetSqlFuncts(DbDriver):
         return True
         
 
+    def insert_topic_query(self):
+        _log.debug("In insert_topic_query - self.topic_table "
+                   "{}".format(self.topics_table))
+        return '''INSERT INTO ''' + self.topics_table + ''' (topic_name)
+            VALUES (%s)'''
+
 def main(args):
     try:
         defs =         {
@@ -279,10 +285,14 @@ def main(args):
                     end = isodate.parse_datetime('2017-04-22T18:55:00'),
 
         )
+        #monet.__connect()
         monet.insert_meta(177,{'foo':'bar'})
-
+        monet.insert_topic("foo")
     except Exception as e:
+        foo = (sys.exc_info())
+        _log.info(traceback.extract_tb(foo[-1]))
         print e
+        
         #monet.execute_stmt("drop table " + defs['data_table']+' ;')
         #monet.execute_stmt("drop table " + defs['meta_table']+' ;')
         #monet.execute_stmt("drop table " + defs['topics_table']+' ;')
