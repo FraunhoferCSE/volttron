@@ -244,18 +244,18 @@ class MonetSqlFuncts(DbDriver):
         :return: True if execution completes. False if unable to connect to
                  database
         """
-        if not self.__connect():
-            return False
+        #if not self.__connect():
+        #    return False
         try: 
-            self.__cursor.execute(
-                 '''REPLACE INTO ''' + self.meta_table + ''' values(%s, %s)'''
+            self.insert_stmt(
+                 '''INSERT INTO ''' + self.meta_table + ''' values(%s, %s)''',
                 (topic_id, jsonapi.dumps(metadata)))
-        except Exception as e:
-            print (e)
-            self.__cursor.execute(
-                "update "+ self.meta_table "set metadata=%s where topic_id=%s ",
+        except monetdb.sql.OperationalError as e:
+            self.rollback()
+            self.insert_stmt(
+                "update "+ self.meta_table + " set metadata=%s where topic_id=%s ",
                 (jsonapi.dumps(metadata), topic_id))
-            
+        self.commit()
         return True
         
 
@@ -279,7 +279,7 @@ def main(args):
                     end = isodate.parse_datetime('2017-04-22T18:55:00'),
 
         )
-        monet.insert_meta(1,{'foo':'bar'})
+        monet.insert_meta(177,{'foo':'bar'})
 
     except Exception as e:
         print e
