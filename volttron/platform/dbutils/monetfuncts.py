@@ -3,12 +3,12 @@ import logging
 from collections import defaultdict
 import monetdb.sql
 import sys
-import pytz
+import pytz,isodate
 import re
 from basedb import DbDriver
 from volttron.platform.agent import utils
 from zmq.utils import jsonapi
-
+import traceback
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
@@ -34,12 +34,12 @@ class MonetSqlFuncts(DbDriver):
             self.agg_topics_table = table_names.get('agg_topics_table', None)
             self.agg_meta_table = table_names.get('agg_meta_table', None)
         # milliseconds work, though. 
-        self.MICROSECOND_SUPPORT = False
+        self.MICROSECOND_SUPPORT = True
         # .connect() method is the only thing used here. 
         super(MonetSqlFuncts, self).__init__(
             'monetdb.sql',
             **connect_params)
-
+        
     def setup_historian_tables(self):
         """
         TODO: add tests for existence. 
@@ -187,15 +187,16 @@ class MonetSqlFuncts(DbDriver):
         if start and end and start == end:
             where_clauses.append("ts = %s")
             args.append(start)
-        elif start:
-            where_clauses.append("ts >= %s")
-            args.append(start)
-        elif end:
-            where_clauses.append("ts < %s")
-            args.append(end)
-
+        else:
+            if start:
+                where_clauses.append("ts >= %s")
+                args.append(start)
+            if end:
+                where_clauses.append("ts < %s")
+                args.append(end)
+            
         where_statement = ' AND '.join(where_clauses)
-
+        print(where_statement)
         order_by = 'ORDER BY ts ASC'
         if order == 'LAST_TO_FIRST':
             order_by = ' ORDER BY topic_id DESC, ts DESC'
@@ -243,27 +244,33 @@ class MonetSqlFuncts(DbDriver):
         :return: True if execution completes. False if unable to connect to
                  database
         """
-        if not self.__connect():
-            return False
+        #if not self.__connect():
+        #    return False
         try: 
-            self.__cursor.execute(
-                 '''REPLACE INTO ''' + self.meta_table + ''' values(%s, %s)'''
+            self.insert_stmt(
+                 '''INSERT INTO ''' + self.meta_table + ''' values(%s, %s)''',
                 (topic_id, jsonapi.dumps(metadata)))
-        except Exception as e:
-            print (e)
-            self.__cursor.execute(
-                "update "+ self.meta_table "set metadata=%s where topic_id=%s ",
+        except monetdb.sql.OperationalError as e:
+            self.rollback()
+            self.insert_stmt(
+                "update "+ self.meta_table + " set metadata=%s where topic_id=%s ",
                 (jsonapi.dumps(metadata), topic_id))
-            
+        self.commit()
         return True
         
+
+    def insert_topic_query(self):
+        _log.debug("In insert_topic_query - self.topic_table "
+                   "{}".format(self.topics_table))
+        return '''INSERT INTO ''' + self.topics_table + ''' (topic_name)
+            VALUES (%s)'''
 
 def main(args):
     try:
         defs =         {
-            'data_table':'data_test_c',
-            'topics_table':'topics_test_c',
-            'meta_table':'meta_test_c',
+            'data_table':'data',
+            'topics_table':'topics',
+            'meta_table':'meta',
             "table_prefix":"meta_"
         }
         monet = MonetSqlFuncts(
@@ -273,10 +280,19 @@ def main(args):
         #monet.setup_historian_tables()
         #monet.record_table_definitions( defs, "volttron_table_definitions")
         #monet.setup_aggregate_historian_tables("volttron_table_definitions")
-        monet.query(1, {1:'foo'})
-        monet.insert_meta(1,{'foo':'bar'})
+        monet.query([1], {1:'foo'},
+                    start = isodate.parse_datetime('2017-04-22T17:55:00'),
+                    end = isodate.parse_datetime('2017-04-22T18:55:00'),
+
+        )
+        #monet.__connect()
+        monet.insert_meta(177,{'foo':'bar'})
+        monet.insert_topic("foo")
     except Exception as e:
+        foo = (sys.exc_info())
+        _log.info(traceback.extract_tb(foo[-1]))
         print e
+        
         #monet.execute_stmt("drop table " + defs['data_table']+' ;')
         #monet.execute_stmt("drop table " + defs['meta_table']+' ;')
         #monet.execute_stmt("drop table " + defs['topics_table']+' ;')
