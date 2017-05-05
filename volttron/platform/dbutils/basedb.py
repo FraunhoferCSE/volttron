@@ -295,7 +295,7 @@ class DbDriver(object):
                               (ts, topic_id, jsonapi.dumps(data)))
         return True
 
-    def insert_topic(self, topic):
+    def insert_topic(self, topic, **kwargs):
         """
         Insert a new topic
 

@@ -188,7 +188,7 @@ class SQLHistorian(BaseHistorian):
                 if topic_id is None:
                     _log.debug('Inserting topic: {}'.format(topic))
                     # Insert topic name as is in db
-                    row = self.writer.insert_topic(topic)
+                    row = self.writer.insert_topic(topic,meta=meta)
                     topic_id = row[0]
                     # user lower case topic name when storing in map
                     # for case insensitive comparison
