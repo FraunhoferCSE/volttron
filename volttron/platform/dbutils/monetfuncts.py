@@ -26,7 +26,7 @@ class MonetSqlFuncts(DbDriver):
         self.meta_table = None
         self.agg_topics_table = None
         self.agg_meta_table = None
-        
+        self.tses = []
         if table_names:
             self.data_table = table_names['data_table']
             self.topics_table = table_names['topics_table']
@@ -171,7 +171,7 @@ class MonetSqlFuncts(DbDriver):
             self.init_microsecond_support()
 
         where_clauses = [] #"WHERE topic_id = %s"]
-        args = [topic_ids[0]]
+        args = []
 
         if start is not None:
             if not self.MICROSECOND_SUPPORT:
@@ -198,7 +198,7 @@ class MonetSqlFuncts(DbDriver):
         print(where_statement)
         order_by = 'ORDER BY ts ASC'
         if order == 'LAST_TO_FIRST':
-            order_by = ' ORDER BY topic_id DESC, ts DESC'
+            order_by = ' ORDER BY ts DESC'
 
         # can't have an offset without a limit
         # -1 = no limit and allows the user to
@@ -218,20 +218,22 @@ class MonetSqlFuncts(DbDriver):
         values = defaultdict(list)
         for topic_id in topic_ids:
             args[0] = topic_id
-            real_query = query.format(where=where_statement,
-                                      topic_id=topic_id,
+            real_query = query.format(where=where_statement,                                      
                                       limit=limit_statement,
                                       offset=offset_statement,
+                                      topic_id=topic_id,
                                       order_by=order_by)
-            _log.debug("Real Query: " + real_query)
-            _log.debug("args: " + str(args))
+            _log.error("Real Query: " + real_query)
+            _log.error("args: " + str(args))
 
             rows = self.select(real_query, args)
             if rows:
                 for ts, value in rows:
-                    values[id_name_map[topic_id]].append(
-                        (utils.format_timestamp(ts.replace(tzinfo=pytz.UTC)),
-                         jsonapi.loads(value)))
+                    if value is not None:
+                        values[id_name_map[topic_id]].append(
+                            (utils.format_timestamp(ts.replace(tzinfo=pytz.UTC)),
+                             jsonapi.loads(value)
+                            ))
             _log.debug("query result values {}".format(values))
         return values
         
@@ -274,16 +276,19 @@ class MonetSqlFuncts(DbDriver):
                 ( topic_name))
             _log.debug("In insert_topic - self.topic_table "
                        "{}".format(self.topics_table))
-            topic_id = ( if ret is not False )
+            topic_id = (ret  if ret is not False else False)
             _log.debug("Topic_id {}".format(topic_id))
             self.commit()
-            self.insert_stmt(
+            self.execute_stmt(
                 '''ALTER TABLE '''+ self.data_table +
-                '''ADD COLUMN topic_%s_ TEXT ; ''',(topic_id))
+                ''' ADD COLUMN topic_%s_ TEXT ; '''%(topic_id))
             self.commit()
+            return [topic_id]
         except monetdb.sql.OperationalError as e:
             self.rollback()
             _log.error("ROLLBACK {}".format(e))
+            topic_id = self.select("SELECT topic_id from topics where topic_name='%s';"%topic_name,[])[0][0]
+            return [topic_id]
         
     def insert_topic_query(self):
         # XXX: alter table data add column
@@ -302,19 +307,31 @@ class MonetSqlFuncts(DbDriver):
         :return: True if execution completes. False if unable to connect to
                  database
         """
-        try:
-            self.insert_stmt(
-                '''INSERT INTO ''' +
-                self.data_table +
-                ''' (ts, topic_%s_) values (%s, %s)''',
-                ( topic_id, ts, jsonapi.dumps(data)))
-        except monetdb.sql.OperationalError as e:
-            self.rollback()
-            self.insert_stmt(
+        if ts not in self.tses:
+            try:
+                ret = self.insert_stmt(
+                    '''INSERT INTO ''' +
+                    self.data_table +
+                    ''' (ts, topic_%s_) values (%s, %s)''',
+                    ( topic_id, ts, jsonapi.dumps(data)))
+                _log.warning("INSERT DATA {} {} {} {}".format(ts, topic_id,data,ret))
+                self.commit()
+            except monetdb.sql.OperationalError as e:
+                self.rollback()
+                _log.warning("insert failed{}".format(e))
+                ret = self.insert_stmt(
+                    "update "+ self.data_table +
+                    " set topic_{}_=%s where ts=%s".format(topic_id),
+                    (jsonapi.dumps(data), ts ))
+                self.commit()
+            self.tses.append(ts)
+            if len(self.tses)> 512:
+                self.tses.pop(0)
+        else:
+            ret = self.insert_stmt(
                 "update "+ self.data_table +
-                " set topic_%s_=%s where ts=%s",
-                (jsonapi.dumps(data), topic_id,ts ))
-        self.commit()
+                " set topic_{}_=%s where ts=%s".format(topic_id),
+                (jsonapi.dumps(data), ts ))                    
         return True
             
     def update_topic_query(self):
@@ -359,7 +376,7 @@ def main(args):
         _log.setLevel(logging.DEBUG)
         monet.setup_historian_tables()
         monet.record_table_definitions( defs, "volttron_table_definitions")
-        monet.setup_aggregate_historian_tables("volttron_table_definitions")
+        #monet.setup_aggregate_historian_tables("volttron_table_definitions")
         monet.insert_topic("foo")
         return
         monet.query([1], {1:'foo'},

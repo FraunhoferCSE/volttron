@@ -101,8 +101,7 @@ class DbDriver(object):
                 self.__cursor = self.__connection.cursor()
 
         except Exception as e:
-            _log.warning(e.__class__.__name__ + "couldn't connect to database")
-
+            _log.warning(e.__class__.__name__ + "couldn't connect to database: %s"%(self.__connect_params))        
         return self.__connection is not None
 
     def read_tablenames_from_db(self, meta_table_name):
@@ -305,6 +304,7 @@ class DbDriver(object):
                  False if unable to connect to database
         """
         if not self.__connect():
+            _log.error("NO CONNECT")
             return False
 
         self.__cursor.execute(self.insert_topic_query(), (topic,))
