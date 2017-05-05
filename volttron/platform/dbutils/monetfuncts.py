@@ -41,6 +41,7 @@ class MonetSqlFuncts(DbDriver):
         super(MonetSqlFuncts, self).__init__(
             'monetdb.sql',
             **connect_params)
+        self.load_coltypes()
         
     def setup_historian_tables(self):
         """
@@ -59,8 +60,7 @@ class MonetSqlFuncts(DbDriver):
             self.execute_stmt(
                 'CREATE TABLE ' + self.data_table +
                 ' (ts timestamp(3) NOT NULL,\
-                test_0_ TEXT NOT NULL, \
-                     UNIQUE( ts))')
+                     PRIMARY KEY ( ts))')
             
             #self.execute_stmt('''CREATE INDEX data_idx
             #                        ON ''' + self.data_table + ''' (ts)''')
@@ -84,9 +84,9 @@ class MonetSqlFuncts(DbDriver):
                       "Please create the tables manually before " \
                       "restarting historian. Please refer to " \
                       "monet-create*.sql files for create " \
-                      "statements"
-
-            raise RuntimeError(err_msg + ',' + repr(err))
+                      "statements. "
+            _log.error(err_msg + repr(err))
+            #raise RuntimeError(err_msg + ',' + repr(err))
     def record_table_definitions(self, tables_def, meta_table_name):
         _log.debug(
             "In record_table_def {} {}".format(tables_def, meta_table_name))
@@ -118,7 +118,6 @@ class MonetSqlFuncts(DbDriver):
                               table_prefix, k))
         self.commit()
 
-    # thus far. 
         
     def setup_aggregate_historian_tables(self, meta_table_name):
         table_names = self.read_tablenames_from_db(meta_table_name)
@@ -290,11 +289,11 @@ class MonetSqlFuncts(DbDriver):
             _log.debug("In insert_topic - self.topic_table "
                        "{}".format(self.topics_table))
             topic_id = (ret  if ret is not False else False)
-            _log.debug("Topic_id {}".format(topic_id))
+            _log.debug("Topic_id {} {}".format(topic_id, kwargs))
             self.commit()
             coltype = kwargs.get("meta",{}).get("type")
             coltype = {
-                "float":"FLOAT",
+                "float":"DOUBLE",
                 "integer":"INTEGER",
             }.get(coltype,"TEXT")
             self.execute_stmt(
@@ -336,11 +335,10 @@ class MonetSqlFuncts(DbDriver):
                     self.data_table +
                     ''' (ts, topic_%s_) values (%s, %s)''',
                     ( topic_id, ts, datum))
-                _log.warning("INSERT DATA {} {} {} {}".format(ts, topic_id,data,ret))
+                _log.debug("INSERT DATA {} {} {} {}".format(ts, topic_id,data,ret))
                 self.commit()
             except monetdb.sql.OperationalError as e:
                 self.rollback()
-                _log.warning("insert failed{}".format(e))
                 ret = self.insert_stmt(
                     "update "+ self.data_table +
                     " set topic_{}_=%s where ts=%s".format(topic_id),
@@ -379,12 +377,14 @@ class MonetSqlFuncts(DbDriver):
         Use the sys.tables and sys.columns 
         information to 
         """
-        meta = self.select("select id from sys.tables where name='data';")[0][0]
+        meta = self.select("select id from sys.tables where name='data';",[])
+        if not meta:
+            return
         self.coltypes = dict(
             self.select(
-                "select name,type from sys.columns where table_id=%s;"%meta)
+                "select name,type from sys.columns where table_id=%s;"%meta[0][0],[])
             )
-        _log.debug("COLTYPES: {}".format(COLTYPES))
+        _log.debug("COLTYPES: {}".format(self.coltypes))
         
     def get_topic_map(self):
         q = "SELECT topic_id, topic_name FROM " + self.topics_table + ";"
