@@ -170,7 +170,7 @@ class MonetSqlFuncts(DbDriver):
         if self.MICROSECOND_SUPPORT is None:
             self.init_microsecond_support()
 
-        where_clauses = [] #"WHERE topic_id = %s"]
+        where_clauses = ["where topic_{topic_id}_ is not null"]
         args = []
 
         if start is not None:
@@ -184,17 +184,19 @@ class MonetSqlFuncts(DbDriver):
                 end = end_str[:end_str.rfind('.')]
 
         if start and end and start == end:
-            where_clauses.append("ts = %s")
+            where_clauses.append("ts = {ts}")
             args.append(start)
         else:
             if start:
-                where_clauses.append("ts >= %s")
+                where_clauses.append("ts >= {ts}")
                 args.append(start)
             if end:
-                where_clauses.append("ts < %s")
+                where_clauses.append("ts < {ts}")
                 args.append(end)
             
-        where_statement = ' AND '.join(where_clauses)
+        where_statement = (' AND '.join(where_clauses)).format(
+            topic_id=topic_id,
+            ts=ts)
         print(where_statement)
         order_by = 'ORDER BY ts ASC'
         if order == 'LAST_TO_FIRST':
