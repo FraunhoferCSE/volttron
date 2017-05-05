@@ -9,6 +9,7 @@ from basedb import DbDriver
 from volttron.platform.agent import utils
 from zmq.utils import jsonapi
 import traceback
+import threading
 utils.setup_logging()
 _log = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class MonetSqlFuncts(DbDriver):
             self.agg_meta_table = table_names.get('agg_meta_table', None)
         # milliseconds work, though. 
         self.MICROSECOND_SUPPORT = True
+        self.insert_lock = threading.Lock()
         # .connect() method is the only thing used here. 
         super(MonetSqlFuncts, self).__init__(
             'monetdb.sql',
@@ -231,12 +233,20 @@ class MonetSqlFuncts(DbDriver):
 
             rows = self.select(real_query, args)
             if rows:
-                for ts, value in rows:
-                    if value is not None:
+                if self.coltypes.get("topic_%s_"%topic_id) == 'clob':
+                    for ts, value in rows:
                         values[id_name_map[topic_id]].append(
-                            (utils.format_timestamp(ts.replace(tzinfo=pytz.UTC)),
+                            (utils.format_timestamp(
+                                ts.replace(tzinfo=pytz.UTC)),
                              jsonapi.loads(value)
                             ))
+                else:
+                    for ts, value in rows:
+                        values[id_name_map[topic_id]].append(
+                            (utils.format_timestamp(
+                                ts.replace(tzinfo=pytz.UTC)),
+                             value
+                            ))                    
             _log.debug("query result values {}".format(values))
         return values
         
@@ -263,7 +273,7 @@ class MonetSqlFuncts(DbDriver):
         self.commit()
         return True
         
-    def insert_topic(self, topic_name):
+    def insert_topic(self, topic_name, **kwargs):
         """
         Insert a new topic
 
@@ -282,16 +292,21 @@ class MonetSqlFuncts(DbDriver):
             topic_id = (ret  if ret is not False else False)
             _log.debug("Topic_id {}".format(topic_id))
             self.commit()
+            coltype = kwargs.get("meta",{}).get("type")
+            coltype = {
+                "float":"FLOAT",
+                "integer":"INTEGER",
+            }.get(coltype,"TEXT")
             self.execute_stmt(
                 '''ALTER TABLE '''+ self.data_table +
-                ''' ADD COLUMN topic_%s_ TEXT ; '''%(topic_id))
+                ''' ADD COLUMN topic_%s_ %s ; '''%(topic_id,coltype))
             self.commit()
-            return [topic_id]
         except monetdb.sql.OperationalError as e:
             self.rollback()
             _log.error("ROLLBACK {}".format(e))
             topic_id = self.select("SELECT topic_id from topics where topic_name='%s';"%topic_name,[])[0][0]
-            return [topic_id]
+        self.load_coltypes()    
+        return [topic_id]
         
     def insert_topic_query(self):
         # XXX: alter table data add column
@@ -310,13 +325,17 @@ class MonetSqlFuncts(DbDriver):
         :return: True if execution completes. False if unable to connect to
                  database
         """
+        datum = (jsonapi.dumps(data) if
+                 self.coltypes.get('topic_%s_'%topic_id) == 'clob'
+                 else data)
         if ts not in self.tses:
+            self.insert_lock.acquire()            
             try:
                 ret = self.insert_stmt(
                     '''INSERT INTO ''' +
                     self.data_table +
                     ''' (ts, topic_%s_) values (%s, %s)''',
-                    ( topic_id, ts, jsonapi.dumps(data)))
+                    ( topic_id, ts, datum))
                 _log.warning("INSERT DATA {} {} {} {}".format(ts, topic_id,data,ret))
                 self.commit()
             except monetdb.sql.OperationalError as e:
@@ -325,16 +344,19 @@ class MonetSqlFuncts(DbDriver):
                 ret = self.insert_stmt(
                     "update "+ self.data_table +
                     " set topic_{}_=%s where ts=%s".format(topic_id),
-                    (jsonapi.dumps(data), ts ))
+                    (datum, ts ))
                 self.commit()
             self.tses.append(ts)
             if len(self.tses)> 512:
                 self.tses.pop(0)
+            self.insert_lock.release()
         else:
+            self.insert_lock.acquire()            
             ret = self.insert_stmt(
                 "update "+ self.data_table +
                 " set topic_{}_=%s where ts=%s".format(topic_id),
-                (jsonapi.dumps(data), ts ))                    
+                (datum, ts ))                    
+            self.insert_lock.release()
         return True
             
     def update_topic_query(self):
@@ -352,6 +374,18 @@ class MonetSqlFuncts(DbDriver):
         return '''UPDATE ''' + self.agg_topics_table + ''' SET
         agg_topic_name = %s WHERE agg_topic_id = %s '''
 
+    def load_coltypes(self):
+        """
+        Use the sys.tables and sys.columns 
+        information to 
+        """
+        meta = self.select("select id from sys.tables where name='data';")[0][0]
+        self.coltypes = dict(
+            self.select(
+                "select name,type from sys.columns where table_id=%s;"%meta)
+            )
+        _log.debug("COLTYPES: {}".format(COLTYPES))
+        
     def get_topic_map(self):
         q = "SELECT topic_id, topic_name FROM " + self.topics_table + ";"
         rows = self.select(q, None)
@@ -363,6 +397,7 @@ class MonetSqlFuncts(DbDriver):
             name_map[n.lower()] = n
         _log.debug(id_map)
         _log.debug(name_map)
+        self.load_coltypes()
         return id_map, name_map
             
 def main(args):
