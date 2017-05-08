@@ -285,7 +285,7 @@ class MonetSqlFuncts(DbDriver):
                 '''INSERT INTO ''' +
                 self.topics_table +
                 ''' ( topic_name) values (%s)''',
-                ( topic_name))
+                ( topic_name,))
             _log.debug("In insert_topic - self.topic_table "
                        "{}".format(self.topics_table))
             topic_id = (ret  if ret is not False else False)
