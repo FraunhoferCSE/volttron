@@ -327,6 +327,8 @@ class MonetSqlFuncts(DbDriver):
         datum = (jsonapi.dumps(data) if
                  self.coltypes.get('topic_%s_'%topic_id) == 'clob'
                  else data)
+        if datum in ('nan',):
+            return
         if ts not in self.tses:
             self.insert_lock.acquire()            
             try:
