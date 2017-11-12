@@ -23,6 +23,7 @@ applications
 /docs/source/apidocs
 *.bak
 volttron.log
+/services/contrib/GlobalSchedulerCore
 /services/contrib/CLIAgent/
 /services/contrib/CPRAgent/
 /services/contrib/Debugger/
